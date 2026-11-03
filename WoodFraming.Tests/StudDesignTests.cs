@@ -1,4 +1,5 @@
 using System.Linq;
+using LoadManager;
 using NDS_WoodLibrary.NDS2018;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -18,7 +19,7 @@ namespace WoodFraming.Tests
         private static StudDesignInput Example() => new StudDesignInput
         {
             Species = Species.DouglasFirLarch, Grade = Grade.No2, Size = "2x6", SpacingIn = 16, LengthIn = 175.5,
-            Loads = new WallTopLoads { Dead = 300, Live = 400 }, WindPressurePsf = 30, DeflectionLimit = 240,
+            Loads = new LineLoad { Dead = 300, Live = 400 }, WindPressurePsf = 30, DeflectionLimit = 240,
         };
 
         [TestMethod]
@@ -43,7 +44,7 @@ namespace WoodFraming.Tests
         {
             var d = StudDesign.Check(Example());
             // no Lr or S: D, D + L, D + 0.6W, D + L + 0.6W
-            CollectionAssert.AreEqual(new[] { "D", "D + L", "D + 0.6W", "D + L + 0.6W" }, d.Combinations.Select(x => x.Name).ToArray());
+            CollectionAssert.AreEqual(new[] { "D", "D + L", "D + 0.6W", "D + L + 0.6W" }, d.Combinations.Select(x => x.Name).ToArray(), string.Join("; ", d.Combinations.Select(x => x.Name)));
             var dl = d.Combinations.Single(x => x.Name == "D + L");    // CD 1.0: Fc* = 1485, CP = 0.29136, Fc' = 432.66
             Assert.AreEqual(1.0, dl.CD);
             Assert.AreEqual(432.6648, dl.FcPrime, 1e-3);
@@ -84,21 +85,44 @@ namespace WoodFraming.Tests
         {
             var i = Example();
             i.WindPressurePsf = null;
-            i.Loads = new WallTopLoads { Dead = 300, Live = 400, Snow = 100 };
+            i.Loads = new LineLoad { Dead = 300, Live = 400, Snow = 100 };
             var d = StudDesign.Check(i);
             Assert.IsFalse(d.Combinations.Any(x => x.Name.Contains("W")));
-            var c = d.Combinations.Single(x => x.Name == "D + L + Li");
+            var c = d.Combinations.Single(x => x.Name == "D + L");
             Assert.AreEqual(1.0, c.CD);
             Assert.AreEqual(5 * 16 / 12.0, c.WLateral, 1e-9);   // 6.667 plf
-            Assert.AreEqual(1.15, d.Combinations.Single(x => x.Name == "D + L + 0.7S + Li").CD);
+            Assert.AreEqual(1.15, d.Combinations.Single(x => x.Name == "D + L + 0.7S").CD);
             Assert.AreEqual(5, d.DeflectionPressurePsf);
+        }
+
+        [TestMethod]
+        public void WindOnly_NoTopLoads_StillChecksTheWind()
+        {
+            var i = Example();
+            i.Loads = null;
+            var d = StudDesign.Check(i);
+            CollectionAssert.AreEqual(new[] { "D", "D + 0.6W" }, d.Combinations.Select(x => x.Name).ToArray());
+            Assert.AreEqual(0, d.Governing.P);
+            Assert.AreEqual(1.6, d.Governing.CD);
+        }
+
+        [TestMethod]
+        public void TakesTheCallersCombinations()
+        {
+            var i = Example();
+            i.Combinations = LoadCombinations.IbcAlternativeAsd().Where(c => c.Equation == "16-2").ToList();
+            var d = StudDesign.Check(i);
+            CollectionAssert.AreEqual(new[] { "D + 0.6W", "D + L + 0.6W" }, d.Combinations.Select(x => x.Name).ToArray());
+            Assert.AreEqual("16-2", d.Governing.Equation);
+            Assert.AreEqual(LoadDuration.TenMinutes, StudDesign.Duration(LoadType.Earthquake));
+            Assert.ThrowsExactly<System.NotSupportedException>(() => StudDesign.Duration(LoadType.Rain));
         }
 
         [TestMethod]
         public void SnowAndRoofLive_Durations()
         {
             var i = Example();
-            i.Loads = new WallTopLoads { Dead = 300, RoofLive = 200, Snow = 250 };
+            i.Loads = new LineLoad { Dead = 300, RoofLive = 200, Snow = 250 };
             var d = StudDesign.Check(i);
             Assert.AreEqual(1.25, d.Combinations.Single(x => x.Name == "D + Lr").CD);
             var s = d.Combinations.Single(x => x.Name == "D + 0.7S");

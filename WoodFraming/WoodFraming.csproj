@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\BuildingModel\BuildingModel.Core\BuildingModel.Core.csproj" />
     <ProjectReference Include="..\..\NDS_WoodLibrary\NDS_WoodLibrary.csproj" />
+    <ProjectReference Include="..\..\LoadManager\LoadManager\LoadManager.csproj" />
   </ItemGroup>
 
 </Project>

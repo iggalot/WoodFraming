@@ -1,21 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using LoadManager;
 using NDS_WoodLibrary.NDS2018;
 
 namespace WoodFraming
 {
-    /// <summary>The gravity loads on top of a wall (plf, service level): dead, floor live, roof live and snow.</summary>
-    public sealed class WallTopLoads
-    {
-        public double Dead { get; set; }
-        public double Live { get; set; }
-        public double RoofLive { get; set; }
-        /// <summary>Snow as ASCE 7-22 gives it (the 2024 IBC's combinations take 0.7 S).</summary>
-        public double Snow { get; set; }
-        public bool IsEmpty => !(Dead > 0) && !(Live > 0) && !(RoofLive > 0) && !(Snow > 0);
-    }
-
     /// <summary>What a stud is checked for (see <see cref="StudDesign.Check"/>).</summary>
     public sealed class StudDesignInput
     {
@@ -25,7 +15,10 @@ namespace WoodFraming
         public double SpacingIn { get; set; }
         /// <summary>The stud's length between the plates (in): its unbraced length about the strong axis.</summary>
         public double LengthIn { get; set; }
-        public WallTopLoads Loads { get; set; } = new WallTopLoads();
+        /// <summary>The gravity loads on the wall's top (plf, service level), from the LoadManager.</summary>
+        public LineLoad Loads { get; set; } = new LineLoad();
+        /// <summary>The load combinations to check (the LoadManager's); null: <see cref="LoadCombinations.IbcAlternativeAsd"/>.</summary>
+        public IList<LoadCombination> Combinations { get; set; }
         /// <summary>
         /// Exterior wall: the components and cladding wind pressure on the stud (psf, strength level, the larger of the
         /// inward and outward, ASCE 7 Ch. 30). Null: an interior wall (<see cref="InteriorPressurePsf"/>).
@@ -33,7 +26,7 @@ namespace WoodFraming
         public double? WindPressurePsf { get; set; }
         /// <summary>Where <see cref="WindPressurePsf"/> came from ("Zone 5, A = 49 sq ft, qh = 25.1 psf ...").</summary>
         public string WindNote { get; set; }
-        /// <summary>An interior wall's horizontal load (IBC 1607.16: not less than 5 psf), a ten-year (live) load.</summary>
+        /// <summary>An interior wall's horizontal load (IBC 1607.16: not less than 5 psf), taken as a live load (L).</summary>
         public double InteriorPressurePsf { get; set; } = StudDesign.InteriorMinimumPsf;
         /// <summary>The deflection limit L/n (IBC Table 1604.3 exterior walls: 240 with brittle finishes, 120 flexible, 360 plaster).</summary>
         public double DeflectionLimit { get; set; }
@@ -70,8 +63,9 @@ namespace WoodFraming
     /// <summary>
     /// A bearing wall stud designed per NDS-2018 3.9.2 (Eq. 3.9-3): axial load from the wall's top loads, bending from the
     /// wind (or the interior 5 psf) on its spacing, simply supported between the plates, braced on its weak axis by the
-    /// sheathing; the combinations are the 2024 IBC's alternative allowable stress ones (1605.2), each with the variable
-    /// loads set to zero in turn, CD by the shortest load in it (NDS 2.3.2.2). Also the bearing on the plate (Fc⊥),
+    /// sheathing; the combinations are the LoadManager's (by default the 2024 IBC's alternative allowable stress ones,
+    /// 1605.2, each with the variable loads set to zero in turn), those with a load the stud does not carry skipped, CD by
+    /// the shortest load in each (NDS 2.3.2.2). Also the bearing on the plate (Fc⊥),
     /// shear (Fv) and the deflection (IBC Table 1604.3, the wind at 0.42 of C&amp;C, footnote f).
     /// </summary>
     public sealed class StudDesign
@@ -104,7 +98,7 @@ namespace WoodFraming
 
         public static readonly string[] Citations =
         {
-            "IBC 2024 1605.1: designs may use \"the alternative allowable stress design load combinations of Section 1605.2.\" 1605.2: Eq. 16-1 D + L + (Lr or 0.7S or R); 16-2 D + L + 0.6W; 16-3 D + L + 0.6W + 0.7S/2; 16-4 D + L + 0.7S + 0.6W/2; \"allowable stresses are permitted to be increased or load combinations reduced where permitted by the material chapter of this code or the referenced standards\" (NDS CD).",
+            LoadCombinations.IbcAlternativeAsdSource,
             Adjustments.CDSource,
             Adjustments.CrSource,
             Adjustments.CPSource,
@@ -112,7 +106,7 @@ namespace WoodFraming
             "NDS-2018 3.7.1.2: le = Ke ℓu; Ke = 1.0 for a stud pinned at both plates (Appendix G, Table G1; not checked against the printed table here). The sheathing braces the weak axis (NDS Commentary C3.6.7), so the depth d governs.",
             Table4.Source4A,
             Table4.Source4B,
-            "IBC 2024 1607.16: interior walls and partitions over 6 ft high, not less than a horizontal load of 5 psf (taken here as a ten-year, live-load duration).",
+            "IBC 2024 1607.16: interior walls and partitions over 6 ft high, not less than a horizontal load of 5 psf (taken here as a live load, L: it goes with the floor live load in the combinations, ten-year duration).",
             "IBC 2024 Table 1604.3, exterior walls: with brittle finishes ℓ/240, with flexible finishes ℓ/120, with plaster or stucco ℓ/360; footnote f: \"The wind load is permitted to be taken as 0.42 times the 'component and cladding' loads for the purpose of determining deflection limits.\"",
         };
 
@@ -129,15 +123,21 @@ namespace WoodFraming
                 CF = Table4.SizeFactor(input.Species, input.Grade, input.Size),
             };
             double s = input.SpacingIn / 12.0, L = input.LengthIn;
-            var ld = input.Loads ?? new WallTopLoads();
+            var ld = input.Loads ?? new LineLoad();
             double lateral = input.WindPressurePsf ?? input.InteriorPressurePsf;
+            var lateralType = input.WindPressurePsf != null ? LoadType.Wind : LoadType.Live;
             double fcE = Adjustments.FcE(d.EminPrime, d.Slenderness);
 
-            foreach (var c in Combos(ld, input.WindPressurePsf != null))
+            // a load is on the stud when its line load is, or it is the lateral pressure's kind (dead always: the stud's own)
+            bool OnStud(LoadType t) => t == LoadType.Dead || ld.Of(t) > 0 || (t == lateralType && lateral > 0);
+            foreach (var c in input.Combinations ?? LoadCombinations.IbcAlternativeAsd())
             {
-                double P = (c.D * ld.Dead + c.L * ld.Live + c.Lr * ld.RoofLive + c.S * ld.Snow) * s;   // lb per stud
-                double w = c.Lat * lateral * s;                                                      // plf along the stud
-                double cd = Adjustments.CD(c.Duration);
+                var types = c.Types.ToList();
+                if (!types.All(OnStud)) continue;      // it has a load this stud does not carry: another combination covers it
+                double P = types.Sum(t => c.Factor(t) * ld.Of(t)) * s;                  // lb per stud
+                double w = c.Factor(lateralType) * lateral * s;                         // plf along the stud
+                var dur = types.Select(Duration).OrderBy(x => Adjustments.CD(x)).Last();        // the shortest load governs (2.3.2.2)
+                double cd = Adjustments.CD(dur);
                 double fcStar = d.Values.Fc * cd * d.CF.Fc;
                 double cp = Adjustments.CP(fcStar, fcE);
                 double M = w / 12.0 * L * L / 8.0;
@@ -146,7 +146,7 @@ namespace WoodFraming
                 double V = w / 12.0 * L / 2.0;
                 d.Combinations.Add(new StudCombination
                 {
-                    Name = c.Name, Equation = c.Equation, Duration = c.Duration, CD = cd, P = P, WLateral = w, M = M,
+                    Name = c.Name, Equation = c.Equation, Duration = dur, CD = cd, P = P, WLateral = w, M = M,
                     fc = fc, FcStar = fcStar, CP = cp, FcPrime = fcPrime, fb = fb, FbPrime = fbPrime, FcE = fcE,
                     Ratio = Adjustments.CombinedCompressionBending(fc, fcPrime, fb, fbPrime, fcE),
                     V = V, fv = 1.5 * V / d.Section.A, FvPrime = d.Values.Fv * cd,
@@ -166,58 +166,22 @@ namespace WoodFraming
             return d;
         }
 
-        private sealed class Combo
-        {
-            public string Name, Equation;
-            public double D = 1, L, Lr, S, Lat;
-            public LoadDuration Duration;
-        }
-
         /// <summary>
-        /// The IBC 1605.2 combinations, each with the variable loads set to zero in turn (loads that are zero are skipped,
-        /// so a combination is not listed twice). Exterior walls take W; interior walls their 5 psf with the gravity ones.
+        /// A load's duration for CD (NDS Table 2.3.2): dead permanent, floor live ten years, snow two months, roof live
+        /// seven days, wind and earthquake ten minutes. Rain is not in the table.
         /// </summary>
-        private static IEnumerable<Combo> Combos(WallTopLoads ld, bool wind)
+        public static LoadDuration Duration(LoadType t)
         {
-            bool L = ld.Live > 0, Lr = ld.RoofLive > 0, S = ld.Snow > 0;
-            var list = new List<Combo>();
-            void Add(string name, string eq, double l, double lr, double s, double lat)
+            switch (t)
             {
-                if ((l > 0 && !L) || (lr > 0 && !Lr) || (s > 0 && !S)) return;
-                var dur = lat > 0 && wind ? LoadDuration.TenMinutes
-                        : lr > 0 ? LoadDuration.SevenDays
-                        : s > 0 ? LoadDuration.TwoMonths
-                        : l > 0 || lat > 0 ? LoadDuration.TenYears
-                        : LoadDuration.Permanent;
-                list.Add(new Combo { Name = name, Equation = eq, L = l, Lr = lr, S = s, Lat = lat, Duration = dur });
+                case LoadType.Dead: return LoadDuration.Permanent;
+                case LoadType.Live: return LoadDuration.TenYears;
+                case LoadType.Snow: return LoadDuration.TwoMonths;
+                case LoadType.RoofLive: return LoadDuration.SevenDays;
+                case LoadType.Wind:
+                case LoadType.Earthquake: return LoadDuration.TenMinutes;
+                default: throw new NotSupportedException($"No NDS Table 2.3.2 load duration for {t}.");
             }
-            string W = wind ? "W" : "Li";
-            Add("D", "16-1", 0, 0, 0, 0);
-            Add("D + L", "16-1", 1, 0, 0, 0);
-            Add("D + Lr", "16-1", 0, 1, 0, 0);
-            Add("D + 0.7S", "16-1", 0, 0, 0.7, 0);
-            Add("D + L + Lr", "16-1", 1, 1, 0, 0);
-            Add("D + L + 0.7S", "16-1", 1, 0, 0.7, 0);
-            if (wind)
-            {
-                Add("D + 0.6W", "16-2", 0, 0, 0, 0.6);
-                Add("D + L + 0.6W", "16-2", 1, 0, 0, 0.6);
-                Add("D + 0.6W + 0.7S/2", "16-3", 0, 0, 0.35, 0.6);
-                Add("D + L + 0.6W + 0.7S/2", "16-3", 1, 0, 0.35, 0.6);
-                Add("D + 0.7S + 0.6W/2", "16-4", 0, 0, 0.7, 0.3);
-                Add("D + L + 0.7S + 0.6W/2", "16-4", 1, 0, 0.7, 0.3);
-            }
-            else
-            {
-                // the interior 5 psf with each gravity combination (IBC 1607.16; a live load: not reduced)
-                Add($"D + {W}", "16-1, 1607.16", 0, 0, 0, 1);
-                Add($"D + L + {W}", "16-1, 1607.16", 1, 0, 0, 1);
-                Add($"D + L + Lr + {W}", "16-1, 1607.16", 1, 1, 0, 1);
-                Add($"D + L + 0.7S + {W}", "16-1, 1607.16", 1, 0, 0.7, 1);
-                Add($"D + Lr + {W}", "16-1, 1607.16", 0, 1, 0, 1);
-                Add($"D + 0.7S + {W}", "16-1, 1607.16", 0, 0, 0.7, 1);
-            }
-            return list;
         }
     }
 }
