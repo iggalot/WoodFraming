@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Wood wall framing for every app on the building model (shear walls, gravity framing, foundations): the layout of a
+       wall's pieces and sheathing, the prescriptive stud check, the sill anchor bolts. No UI. The model is the
+       backbone (stud size and spacing are read from it); the NDS values come from NDS_WoodLibrary. -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>WoodFraming</RootNamespace>
+    <AssemblyName>WoodFraming</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingModel\BuildingModel.Core\BuildingModel.Core.csproj" />
+    <ProjectReference Include="..\..\NDS_WoodLibrary\NDS_WoodLibrary.csproj" />
+  </ItemGroup>
+
+</Project>
