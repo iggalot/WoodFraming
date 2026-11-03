@@ -43,8 +43,12 @@ namespace WoodFraming.Tests
         public void Gravity_CombinationsUseTheirOwnCD()
         {
             var d = StudDesign.Check(Example());
-            // no Lr or S: D, D + L, D + 0.6W, D + L + 0.6W
-            CollectionAssert.AreEqual(new[] { "D", "D + L", "D + 0.6W", "D + L + 0.6W" }, d.Combinations.Select(x => x.Name).ToArray(), string.Join("; ", d.Combinations.Select(x => x.Name)));
+            // no Lr or S: every ASD combination of D, L and W (ASCE 7-22 2.4 first, then the IBC ones it doesn't repeat)
+            CollectionAssert.AreEqual(new[]
+            {
+                "D", "D + L", "D + 0.75L", "D + 0.6W", "D + 0.75(0.6W)", "D + 0.75L + 0.75(0.6W)", "0.6D", "0.6D + 0.6W",
+                "D + L + 0.6W", "D + 0.6W/2", "D + L + 0.6W/2", "0.9D",
+            }, d.Combinations.Select(x => x.Name).ToArray(), string.Join("; ", d.Combinations.Select(x => x.Name)));
             var dl = d.Combinations.Single(x => x.Name == "D + L");    // CD 1.0: Fc* = 1485, CP = 0.29136, Fc' = 432.66
             Assert.AreEqual(1.0, dl.CD);
             Assert.AreEqual(432.6648, dl.FcPrime, 1e-3);
@@ -101,7 +105,7 @@ namespace WoodFraming.Tests
             var i = Example();
             i.Loads = null;
             var d = StudDesign.Check(i);
-            CollectionAssert.AreEqual(new[] { "D", "D + 0.6W" }, d.Combinations.Select(x => x.Name).ToArray());
+            CollectionAssert.AreEqual(new[] { "D", "D + 0.6W", "D + 0.75(0.6W)", "0.6D", "0.6D + 0.6W", "D + 0.6W/2", "0.9D" }, d.Combinations.Select(x => x.Name).ToArray());
             Assert.AreEqual(0, d.Governing.P);
             Assert.AreEqual(1.6, d.Governing.CD);
         }
@@ -110,12 +114,31 @@ namespace WoodFraming.Tests
         public void TakesTheCallersCombinations()
         {
             var i = Example();
-            i.Combinations = LoadCombinations.IbcAlternativeAsd().Where(c => c.Equation == "16-2").ToList();
+            i.Combinations = LoadCombinations.IbcAlternativeAsd().Where(c => c.Equations.Contains("IBC Eq. 16-2")).ToList();
             var d = StudDesign.Check(i);
-            CollectionAssert.AreEqual(new[] { "D + 0.6W", "D + L + 0.6W" }, d.Combinations.Select(x => x.Name).ToArray());
-            Assert.AreEqual("16-2", d.Governing.Equation);
+            CollectionAssert.AreEqual(new[] { "D", "D + L", "D + 0.6W", "D + L + 0.6W" }, d.Combinations.Select(x => x.Name).ToArray());
+            Assert.AreEqual("IBC Eq. 16-2; IBC Eq. 16-3", d.Governing.Equation);
             Assert.AreEqual(LoadDuration.TenMinutes, StudDesign.Duration(LoadType.Earthquake));
+            Assert.AreEqual(LoadDuration.TenMinutes, StudDesign.Duration(LoadType.SeismicVertical));
             Assert.ThrowsExactly<System.NotSupportedException>(() => StudDesign.Duration(LoadType.Rain));
+            Assert.ThrowsExactly<System.NotSupportedException>(() => StudDesign.Duration(LoadType.Tornado));
+        }
+
+        /// <summary>
+        /// ASCE 7-22 2.4 Eq. 6a, D + 0.75L + 0.75(0.6W) (CD 1.6): P = (300 + 0.75 × 400) × 16/12 = 800 lb, fc = 96.97 psi;
+        /// w = 0.45 × 30 × 16/12 = 18 plf = 1.5 lb/in, M = 1.5 × 175.5² / 8 = 5,775.05 lb-in, fb = 763.64 psi;
+        /// (96.97/447.48)² + 763.64 / [2152.8 (1 − 96.97/468.24)] = 0.0470 + 0.4474 = 0.4943.
+        /// </summary>
+        [TestMethod]
+        public void Asce7_6a_HandCalc()
+        {
+            var c = StudDesign.Check(Example()).Combinations.Single(x => x.Name == "D + 0.75L + 0.75(0.6W)");
+            Assert.AreEqual("ASCE 7-22 2.4 Eq. 6a", c.Equation);
+            Assert.AreEqual(1.6, c.CD);
+            Assert.AreEqual(800, c.P, 1e-9);
+            Assert.AreEqual(18, c.WLateral, 1e-9);
+            Assert.AreEqual(5775.047, c.M, 1e-3);
+            Assert.AreEqual(0.4943, c.Ratio, 1e-3);
         }
 
         [TestMethod]

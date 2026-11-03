@@ -17,7 +17,7 @@ namespace WoodFraming
         public double LengthIn { get; set; }
         /// <summary>The gravity loads on the wall's top (plf, service level), from the LoadManager.</summary>
         public LineLoad Loads { get; set; } = new LineLoad();
-        /// <summary>The load combinations to check (the LoadManager's); null: <see cref="LoadCombinations.IbcAlternativeAsd"/>.</summary>
+        /// <summary>The load combinations to check (the LoadManager's); null: every ASD one, <see cref="LoadCombinations.Asd"/> (ASCE 7-22 2.4 and IBC 1605.2).</summary>
         public IList<LoadCombination> Combinations { get; set; }
         /// <summary>
         /// Exterior wall: the components and cladding wind pressure on the stud (psf, strength level, the larger of the
@@ -63,8 +63,8 @@ namespace WoodFraming
     /// <summary>
     /// A bearing wall stud designed per NDS-2018 3.9.2 (Eq. 3.9-3): axial load from the wall's top loads, bending from the
     /// wind (or the interior 5 psf) on its spacing, simply supported between the plates, braced on its weak axis by the
-    /// sheathing; the combinations are the LoadManager's (by default the 2024 IBC's alternative allowable stress ones,
-    /// 1605.2, each with the variable loads set to zero in turn), those with a load the stud does not carry skipped, CD by
+    /// sheathing; the combinations are the LoadManager's (by default every ASD one: ASCE 7-22 2.4 and IBC 1605.2,
+    /// each with the variable loads set to zero in turn), those with a load the stud does not carry skipped, CD by
     /// the shortest load in each (NDS 2.3.2.2). Also the bearing on the plate (Fc⊥),
     /// shear (Fv) and the deflection (IBC Table 1604.3, the wind at 0.42 of C&amp;C, footnote f).
     /// </summary>
@@ -98,6 +98,7 @@ namespace WoodFraming
 
         public static readonly string[] Citations =
         {
+            LoadCombinations.Asce7AsdSource,
             LoadCombinations.IbcAlternativeAsdSource,
             Adjustments.CDSource,
             Adjustments.CrSource,
@@ -130,7 +131,7 @@ namespace WoodFraming
 
             // a load is on the stud when its line load is, or it is the lateral pressure's kind (dead always: the stud's own)
             bool OnStud(LoadType t) => t == LoadType.Dead || ld.Of(t) > 0 || (t == lateralType && lateral > 0);
-            foreach (var c in input.Combinations ?? LoadCombinations.IbcAlternativeAsd())
+            foreach (var c in input.Combinations ?? LoadCombinations.Asd())
             {
                 var types = c.Types.ToList();
                 if (!types.All(OnStud)) continue;      // it has a load this stud does not carry: another combination covers it
@@ -168,7 +169,7 @@ namespace WoodFraming
 
         /// <summary>
         /// A load's duration for CD (NDS Table 2.3.2): dead permanent, floor live ten years, snow two months, roof live
-        /// seven days, wind and earthquake ten minutes. Rain is not in the table.
+        /// seven days, wind and earthquake ten minutes. Rain and tornado are not in the table.
         /// </summary>
         public static LoadDuration Duration(LoadType t)
         {
@@ -179,7 +180,9 @@ namespace WoodFraming
                 case LoadType.Snow: return LoadDuration.TwoMonths;
                 case LoadType.RoofLive: return LoadDuration.SevenDays;
                 case LoadType.Wind:
-                case LoadType.Earthquake: return LoadDuration.TenMinutes;
+                case LoadType.Earthquake:
+                case LoadType.SeismicHorizontal:
+                case LoadType.SeismicVertical: return LoadDuration.TenMinutes;
                 default: throw new NotSupportedException($"No NDS Table 2.3.2 load duration for {t}.");
             }
         }
