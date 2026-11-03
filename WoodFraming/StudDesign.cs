@@ -19,8 +19,8 @@ namespace WoodFraming
     /// <summary>What a stud is checked for (see <see cref="StudDesign.Check"/>).</summary>
     public sealed class StudDesignInput
     {
-        public Species Species { get; set; } = Species.DouglasFirLarch;
-        public Grade Grade { get; set; } = Grade.No2;
+        public Species Species { get; set; }
+        public Grade Grade { get; set; }
         public string Size { get; set; }
         public double SpacingIn { get; set; }
         /// <summary>The stud's length between the plates (in): its unbraced length about the strong axis.</summary>
@@ -36,7 +36,7 @@ namespace WoodFraming
         /// <summary>An interior wall's horizontal load (IBC 1607.16: not less than 5 psf), a ten-year (live) load.</summary>
         public double InteriorPressurePsf { get; set; } = StudDesign.InteriorMinimumPsf;
         /// <summary>The deflection limit L/n (IBC Table 1604.3 exterior walls: 240 with brittle finishes, 120 flexible, 360 plaster).</summary>
-        public double DeflectionLimit { get; set; } = 240;
+        public double DeflectionLimit { get; set; }
         /// <summary>Studs repetitive (4.3.9: ≤ 24" o.c., three or more, sheathed): Cr = 1.15.</summary>
         public bool Repetitive { get; set; } = true;
         /// <summary>Ke: 1.0 for a stud pinned at both plates.</summary>
@@ -120,7 +120,7 @@ namespace WoodFraming
         public static StudDesign Check(StudDesignInput input)
         {
             if (input == null) throw new ArgumentNullException(nameof(input));
-            if (!(input.SpacingIn > 0) || !(input.LengthIn > 0)) throw new ArgumentOutOfRangeException(nameof(input), "Spacing and length must be more than 0.");
+            if (!(input.SpacingIn > 0) || !(input.LengthIn > 0) || !(input.DeflectionLimit > 0)) throw new ArgumentOutOfRangeException(nameof(input), "Spacing, length and the deflection limit must be more than 0.");
             var d = new StudDesign
             {
                 Input = input,

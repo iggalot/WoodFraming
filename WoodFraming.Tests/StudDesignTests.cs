@@ -18,7 +18,7 @@ namespace WoodFraming.Tests
         private static StudDesignInput Example() => new StudDesignInput
         {
             Species = Species.DouglasFirLarch, Grade = Grade.No2, Size = "2x6", SpacingIn = 16, LengthIn = 175.5,
-            Loads = new WallTopLoads { Dead = 300, Live = 400 }, WindPressurePsf = 30,
+            Loads = new WallTopLoads { Dead = 300, Live = 400 }, WindPressurePsf = 30, DeflectionLimit = 240,
         };
 
         [TestMethod]
