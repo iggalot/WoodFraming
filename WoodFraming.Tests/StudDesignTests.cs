@@ -22,6 +22,30 @@ namespace WoodFraming.Tests
             Loads = new LineLoad { Dead = 300, Live = 400 }, WindPressurePsf = 30, DeflectionLimit = 240,
         };
 
+        /// <summary>
+        /// A beam end D 1000, L 2000, Lr 500 lb on the Example wall (D 300, L 400 plf, 16" o.c.): the post takes it plus 16/12 ft of
+        /// the line load: D 1400, L 2533.33, Lr 500. The most: D + L + Lr (IBC 16-1) = 4433.33 lb at CD 1.25 (3546.67 over CD); the
+        /// one governing a wood post: D + L = 3933.33 at CD 1.0. Axial only: no wind combination.
+        /// </summary>
+        [TestMethod]
+        public void Post_UnderAConcentratedLoad_HandCalc()
+        {
+            var input = Example();
+            input.Points = new[] { new ConcentratedLoad { From = "BM1", At = 10, Load = new PointLoad { Dead = 1000, Live = 2000, RoofLive = 500 } } };
+            var p = StudDesign.Check(input).Posts.Single();
+            Assert.AreEqual("BM1", p.From);
+            Assert.AreEqual(1400, p.Service.Dead, 1e-9);
+            Assert.AreEqual(2533.333, p.Service.Live, 1e-3);
+            Assert.AreEqual("D + L + Lr", p.MaxP.Name);
+            Assert.AreEqual(4433.333, p.MaxP.P, 1e-3);
+            Assert.AreEqual(1.25, p.MaxP.CD);
+            Assert.AreEqual("D + L", p.Governing.Name);
+            Assert.AreEqual(3933.333, p.Governing.P, 1e-3);
+            Assert.AreEqual(1555.556, p.Combinations.Single(c => c.Name == "D").POverCD, 1e-3);
+            Assert.AreEqual(3675, p.Combinations.Single(c => c.Name == "D + 0.75L + 0.75Lr").P, 1e-9);
+            Assert.IsFalse(p.Combinations.Any(c => c.Name.Contains("W") || c.Name.Contains("S")));
+        }
+
         [TestMethod]
         public void Combined_HandCalc()
         {

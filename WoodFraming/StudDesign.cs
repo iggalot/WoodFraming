@@ -34,6 +34,41 @@ namespace WoodFraming
         public bool Repetitive { get; set; } = true;
         /// <summary>Ke: 1.0 for a stud pinned at both plates.</summary>
         public double Ke { get; set; } = 1.0;
+        /// <summary>Concentrated loads on the wall's top (beam ends, posts from above; service level), from the LoadManager.</summary>
+        public IList<ConcentratedLoad> Points { get; set; }
+    }
+
+    /// <summary>One load combination's axial load on a post.</summary>
+    public sealed class PostCombination
+    {
+        public string Name { get; set; }
+        public string Equation { get; set; }
+        public LoadDuration Duration { get; set; }
+        public double CD { get; set; }
+        /// <summary>The axial load (lb).</summary>
+        public double P { get; set; }
+        /// <summary>P / CD: which combination governs a wood post of any size (the capacity goes with CD).</summary>
+        public double POverCD => CD > 0 ? P / CD : 0;
+    }
+
+    /// <summary>
+    /// The post under a concentrated load on the wall's top: it carries the concentrated load and the wall's line load over
+    /// one stud spacing (the stud it stands in for), in every combination. Its loads only; it is not sized here.
+    /// </summary>
+    public sealed class PostLoad
+    {
+        public string From { get; set; }
+        /// <summary>Along the wall from its start (ft).</summary>
+        public double AtFt { get; set; }
+        /// <summary>The concentrated load (service).</summary>
+        public PointLoad Point { get; set; } = new PointLoad();
+        /// <summary>The post's whole service load: the concentrated load plus the line load over one spacing.</summary>
+        public PointLoad Service { get; set; } = new PointLoad();
+        public List<PostCombination> Combinations { get; } = new List<PostCombination>();
+        /// <summary>The largest axial load.</summary>
+        public PostCombination MaxP => Combinations.OrderByDescending(c => c.P).FirstOrDefault();
+        /// <summary>The combination that governs a wood post: the largest P / CD.</summary>
+        public PostCombination Governing => Combinations.OrderByDescending(c => c.POverCD).FirstOrDefault();
     }
 
     /// <summary>One load combination's stresses.</summary>
@@ -95,6 +130,8 @@ namespace WoodFraming
         public bool Passes => SlendernessOk && MaxRatio <= 1 + 1e-9 && BearingFc <= FcPerpPrime + 1e-9 && MaxShearRatio <= 1 + 1e-9 && DeflectionIn <= DeflectionAllowedIn + 1e-9;
         public bool Exterior => Input.WindPressurePsf != null;
         public List<string> Notes { get; } = new List<string>();
+        /// <summary>The posts under the concentrated loads, with their axial loads by combination (not sized).</summary>
+        public List<PostLoad> Posts { get; } = new List<PostLoad>();
 
         public static readonly string[] Citations =
         {
@@ -161,10 +198,37 @@ namespace WoodFraming
             double wd = d.DeflectionPressurePsf * s / 12.0;  // lb/in
             d.DeflectionIn = 5 * wd * Math.Pow(L, 4) / (384 * d.EPrime * d.Section.Ix);
 
+            foreach (var pt in input.Points ?? new List<ConcentratedLoad>())
+                d.Posts.Add(Post(pt, ld, s, input.Combinations ?? LoadCombinations.Asd()));
+
             if (!d.SlendernessOk) d.Notes.Add($"le/d = {d.Slenderness:0.0}: over the 50 NDS 3.7.1.4 allows. A deeper stud is needed.");
             if (input.SpacingIn > 24 && input.Repetitive) d.Notes.Add("Over 24\" o.c.: not a repetitive member (4.3.9); Cr should be 1.0.");
             d.Notes.Add("Bearing on the plates: Fc⊥ with Cb = 1.0 (conservative); the plates are the stud's species and grade.");
             return d;
+        }
+
+        /// <summary>
+        /// The post under a concentrated load: the load plus the wall's line load over one stud spacing <paramref name="spacingFt"/>,
+        /// axial only, in every combination whose loads are all on it (dead always counts), CD by the shortest load in each.
+        /// </summary>
+        public static PostLoad Post(ConcentratedLoad pt, LineLoad line, double spacingFt, IEnumerable<LoadCombination> combinations)
+        {
+            var point = pt?.Load ?? new PointLoad();
+            var total = point + (line ?? new LineLoad()).Over(spacingFt);
+            var post = new PostLoad { From = pt?.From, AtFt = pt?.At ?? 0, Point = point, Service = total };
+            bool On(LoadType t) => t == LoadType.Dead || total.Of(t) > 0;
+            foreach (var c in combinations)
+            {
+                var types = c.Types.ToList();
+                if (!types.All(On)) continue;
+                var dur = types.Select(Duration).OrderBy(x => Adjustments.CD(x)).Last();
+                post.Combinations.Add(new PostCombination
+                {
+                    Name = c.Name, Equation = c.Equation, Duration = dur, CD = Adjustments.CD(dur),
+                    P = types.Sum(t => c.Factor(t) * total.Of(t)),
+                });
+            }
+            return post;
         }
 
         /// <summary>
