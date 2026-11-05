@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Wood wall framing drawn in 3D, for every app on the building model: a wall's pieces and sheathing (WallFraming) as a
+       WPF model, its materials, and a view to turn it in. The apps add their own design to it (the shear wall app its
+       hold-downs, straps and anchors; the load manager its loads on a free body). -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>WoodFraming.Wpf</RootNamespace>
+    <AssemblyName>WoodFraming.Wpf</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\WoodFraming\WoodFraming.csproj" />
+    <!-- the 3D views' camera moves (OrbitMath), the same in every app -->
+    <ProjectReference Include="..\..\BuildingModel\BuildingModel.Sketch\BuildingModel.Sketch.csproj" />
+  </ItemGroup>
+
+</Project>
