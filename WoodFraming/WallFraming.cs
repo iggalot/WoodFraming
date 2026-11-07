@@ -70,22 +70,13 @@ namespace WoodFraming
         /// <summary>The underside of the top plates: the studs run from the sill's top up to here.</summary>
         public double StudTop => Height - 2 * Ply;
 
-        /// <summary>The stud sizes a wall may be given, smallest first.</summary>
-        public static readonly string[] StudSizes = { "2x4", "2x6", "2x8" };
+        /// <summary>The stud sizes a wall may be given, smallest first (the building model's, <see cref="BuildingModel.Model.StudSizes"/>).</summary>
+        public static readonly string[] StudSizes = BuildingModel.Model.StudSizes.All;
 
         public static bool IsStudSize(string size) => Array.IndexOf(StudSizes, size) >= 0;
 
-        /// <summary>Actual depth (in) of a nominal 2x size: 2x4 3.5, 2x6 5.5, 2x8 7.25.</summary>
-        public static double DepthOf(string size)
-        {
-            switch (size)
-            {
-                case "2x4": return 3.5;
-                case "2x6": return 5.5;
-                case "2x8": return 7.25;
-                default: throw new ArgumentException($"Not a stud size: \"{size}\".", nameof(size));
-            }
-        }
+        /// <summary>Actual depth (in) of a nominal 2x size: the building model's table (<see cref="BuildingModel.Model.StudSizes.DepthOf"/>).</summary>
+        public static double DepthOf(string size) => BuildingModel.Model.StudSizes.DepthOf(size);
 
         /// <summary>Plies of 2x in a post at least <paramref name="postAlongWall"/> in. along the wall, at least two.</summary>
         public static int PliesFor(double postAlongWall) => Math.Max(2, (int)Math.Ceiling(postAlongWall / Ply - 0.05));
