@@ -63,6 +63,9 @@ namespace WoodFraming
         /// <summary>The studs' depth across the wall (in): 3.5 for a 2x4, 5.5 for a 2x6; the plates are as wide.</summary>
         public double StudDepth { get; private set; }
         public int PostPlies { get; private set; }
+        /// <summary>The shear part (in from the low end): the hold-down posts at its ends, the sheets over it; the whole wall unless given.</summary>
+        public double PartFrom { get; private set; }
+        public double PartTo { get; private set; }
         public List<FramingPiece> Pieces { get; } = new List<FramingPiece>();
         public List<SheathingSheet> Sheets { get; } = new List<SheathingSheet>();
 
@@ -87,9 +90,11 @@ namespace WoodFraming
         /// <paramref name="postsUnderAt"/>: where hold-downs from above land (in from the low end), each gets a post.
         /// <paramref name="studSize"/> (one of <see cref="StudSizes"/>) and <paramref name="spacing"/> (in, on centre): the
         /// wall's, from the building model (its own, else the project's defaults: Building.StudSizeOf / StudSpacingOf).
+        /// <paramref name="partFromIn"/>, <paramref name="partToIn"/>: the shear part (in from the low end; the whole wall when
+        /// left out): its hold-down posts at its ends, its sheets over it; the wall's own ends outside it a single stud.
         /// </summary>
         public static WallFraming Build(double lengthFt, double heightFt, string studSize, double spacing, double postAlongWall,
-                                        IEnumerable<double> postsUnderAt = null)
+                                        IEnumerable<double> postsUnderAt = null, double partFromIn = 0, double partToIn = -1)
         {
             if (!(spacing > 0)) throw new ArgumentOutOfRangeException(nameof(spacing), "The stud spacing must be more than 0.");
             var f = new WallFraming
@@ -98,6 +103,10 @@ namespace WoodFraming
             };
             f.StudDepth = DepthOf(f.StudSize);
             double L = f.Length, H = f.Height;
+            double p0 = Math.Max(0, Math.Min(L, partFromIn)), p1 = partToIn < 0 ? L : Math.Max(0, Math.Min(L, partToIn));
+            if (p1 - p0 < 2 * Ply) { p0 = 0; p1 = L; }
+            f.PartFrom = p0;
+            f.PartTo = p1;
             if (L < 2 * Ply || H < 4 * Ply) return f;
 
             f.Pieces.Add(new FramingPiece { Kind = FramingKind.SillPlate, X0 = 0, X1 = L, Y0 = 0, Y1 = Ply, Size = f.StudSize });
@@ -105,21 +114,25 @@ namespace WoodFraming
             f.Pieces.Add(new FramingPiece { Kind = FramingKind.TopPlate, X0 = 0, X1 = L, Y0 = H - Ply, Y1 = H, Size = f.StudSize });
             double y0 = Ply, y1 = f.StudTop;
 
-            // the hold-down posts at the ends (no wider than half the wall)
-            f.PostPlies = Math.Min(PliesFor(postAlongWall), Math.Max(1, (int)Math.Floor(L / 2 / Ply)));
+            // the hold-down posts at the shear part's ends (no wider than half of it)
+            f.PostPlies = Math.Min(PliesFor(postAlongWall), Math.Max(1, (int)Math.Floor((p1 - p0) / 2 / Ply)));
             double post = f.PostPlies * Ply;
             for (int i = 0; i < f.PostPlies; i++)
             {
-                f.Pieces.Add(new FramingPiece { Kind = FramingKind.EndPost, X0 = i * Ply, X1 = (i + 1) * Ply, Y0 = y0, Y1 = y1, Size = f.StudSize });
-                f.Pieces.Add(new FramingPiece { Kind = FramingKind.EndPost, X0 = L - (i + 1) * Ply, X1 = L - i * Ply, Y0 = y0, Y1 = y1, Size = f.StudSize });
+                f.Pieces.Add(new FramingPiece { Kind = FramingKind.EndPost, X0 = p0 + i * Ply, X1 = p0 + (i + 1) * Ply, Y0 = y0, Y1 = y1, Size = f.StudSize });
+                f.Pieces.Add(new FramingPiece { Kind = FramingKind.EndPost, X0 = p1 - (i + 1) * Ply, X1 = p1 - i * Ply, Y0 = y0, Y1 = y1, Size = f.StudSize });
             }
+            var taken = new List<(double a, double b)> { (p0, p0 + post), (p1 - post, p1) };
+            // the wall's own ends past the shear part: a stud each
+            if (p0 > 0.01) { f.Pieces.Add(new FramingPiece { Kind = FramingKind.Stud, X0 = 0, X1 = Ply, Y0 = y0, Y1 = y1, Size = f.StudSize }); taken.Add((0, Ply)); }
+            if (p1 < L - 0.01) { f.Pieces.Add(new FramingPiece { Kind = FramingKind.Stud, X0 = L - Ply, X1 = L, Y0 = y0, Y1 = y1, Size = f.StudSize }); taken.Add((L - Ply, L)); }
 
             // a two-ply post under each hold-down from above, centred on it, kept clear of the end posts and each other
-            var taken = new List<(double a, double b)> { (0, post), (L - post, L) };
             foreach (double at in (postsUnderAt ?? Enumerable.Empty<double>()).OrderBy(x => x))
             {
-                if (at < post + Ply || at > L - post - Ply) continue; // over an end post: that post carries it
-                double a = Math.Max(post, Math.Min(L - post - 2 * Ply, at - Ply));
+                bool overPost = (at > p0 - Ply && at < p0 + post + Ply) || (at > p1 - post - Ply && at < p1 + Ply); // that post carries it
+                if (overPost || at < Ply || at > L - Ply) continue;
+                double a = Math.Max(0, Math.Min(L - 2 * Ply, at - Ply));
                 if (taken.Any(t => a < t.b - 0.01 && a + 2 * Ply > t.a + 0.01)) continue; // on an end post or a post already there
                 taken.Add((a, a + 2 * Ply));
                 for (int i = 0; i < 2; i++)
@@ -127,20 +140,20 @@ namespace WoodFraming
             }
 
             // studs at the spacing from the low end, centred on the layout marks, where there is no post
-            for (double c = f.Spacing; c + Ply / 2 <= L - post + 1e-9; c += f.Spacing)
+            for (double c = f.Spacing; c + Ply / 2 <= L + 1e-9; c += f.Spacing)
             {
                 double a = c - Ply / 2, b = c + Ply / 2;
                 if (taken.Any(t => a < t.b - 0.01 && b > t.a + 0.01)) continue;
                 f.Pieces.Add(new FramingPiece { Kind = FramingKind.Stud, X0 = a, X1 = b, Y0 = y0, Y1 = y1, Size = f.StudSize });
             }
 
-            // sheets standing up from the low end; a wall over 8 ft has a horizontal joint, blocked
-            for (double x = 0; x < L - 0.01; x += SheetWidth)
+            // sheets standing up from the shear part's low end, over it; a wall over 8 ft has a horizontal joint, blocked
+            for (double x = p0; x < p1 - 0.01; x += SheetWidth)
                 for (double y = 0; y < H - 0.01; y += SheetHeight)
-                    f.Sheets.Add(new SheathingSheet { X0 = x, X1 = Math.Min(L, x + SheetWidth), Y0 = y, Y1 = Math.Min(H, y + SheetHeight) });
+                    f.Sheets.Add(new SheathingSheet { X0 = x, X1 = Math.Min(p1, x + SheetWidth), Y0 = y, Y1 = Math.Min(H, y + SheetHeight) });
             for (double j = SheetHeight; j < y1 - Ply - 0.01; j += SheetHeight)
             {
-                var ups = f.Uprights.OrderBy(p => p.X0).ToList();
+                var ups = f.Uprights.Where(p => p.X0 >= p0 - 0.01 && p.X1 <= p1 + 0.01).OrderBy(p => p.X0).ToList();
                 for (int i = 0; i + 1 < ups.Count; i++)
                 {
                     double a = ups[i].X1, b = ups[i + 1].X0;

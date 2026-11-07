@@ -5,6 +5,7 @@
     <LangVersion>latest</LangVersion>
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
+    <UseWPF>true</UseWPF>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +17,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\WoodFraming\WoodFraming.csproj" />
+    <!-- the wall views (WallView, WallPanel), the same in every app -->
+    <ProjectReference Include="..\WoodFraming.Wpf\WoodFraming.Wpf.csproj" />
   </ItemGroup>
 
 </Project>
