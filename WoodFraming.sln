@@ -15,12 +15,18 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LoadManager", "..\LoadManag
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WoodFraming.Wpf", "WoodFraming.Wpf\WoodFraming.Wpf.csproj", "{3E6B1F40-8C2D-4B7A-A915-6D0F2C4B8E14}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "WoodFraming.Connections", "WoodFraming.Connections\WoodFraming.Connections.csproj", "{3E6B1F40-8C2D-4B7A-A915-6D0F2C4B8E15}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{3E6B1F40-8C2D-4B7A-A915-6D0F2C4B8E15}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3E6B1F40-8C2D-4B7A-A915-6D0F2C4B8E15}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3E6B1F40-8C2D-4B7A-A915-6D0F2C4B8E15}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3E6B1F40-8C2D-4B7A-A915-6D0F2C4B8E15}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3E6B1F40-8C2D-4B7A-A915-6D0F2C4B8E14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3E6B1F40-8C2D-4B7A-A915-6D0F2C4B8E14}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3E6B1F40-8C2D-4B7A-A915-6D0F2C4B8E14}.Release|Any CPU.ActiveCfg = Release|Any CPU

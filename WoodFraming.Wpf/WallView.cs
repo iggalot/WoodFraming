@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using BuildingModel.Geometry;
 using BuildingModel.Model;
+using WoodFraming.Connections;
 
 namespace WoodFraming.Wpf
 {
@@ -60,6 +61,8 @@ namespace WoodFraming.Wpf
         public List<WallViewLanding> Above { get; } = new List<WallViewLanding>();
         /// <summary>The shear wall design (null: a plain wall, or not designed yet).</summary>
         public ShearWallDesign Shear { get; set; }
+        /// <summary>A first-story shear wall's sill anchor bolts as designed (the "Connections" section; null: none).</summary>
+        public SillAnchors Anchors { get; set; }
         /// <summary>The shear part (in from the low end as built).</summary>
         public double ShearFromIn { get; set; }
         public double ShearToIn { get; set; }
@@ -99,12 +102,14 @@ namespace WoodFraming.Wpf
 
         /// <summary>
         /// The view of <paramref name="w"/> on the story under <paramref name="levelId"/> (see <see cref="StoryTop"/>), from
-        /// the model and its lateral design (<paramref name="lat"/>: the saved one when null; an app passes its live one).
+        /// the model and its lateral design (<paramref name="lat"/>: the saved one when null; an app passes its live one), and
+        /// the connections the design gave it (<paramref name="connections"/>, the same: its sill's anchor bolts).
         /// </summary>
-        public static WallView FromModel(Building b, Wall w, string levelId = null, LateralSection lat = null)
+        public static WallView FromModel(Building b, Wall w, string levelId = null, LateralSection lat = null, ConnectionsSection connections = null)
         {
             if (b == null || w == null) return null;
             lat = lat ?? LateralSection.Read(b);
+            connections = connections ?? ConnectionsSection.Read(b);
             var topLevel = StoryTop(b, w, levelId);
             var below = topLevel == null ? null : b.Levels.Where(l => l.Elevation < topLevel.Elevation - 1e-9).OrderByDescending(l => l.Elevation).FirstOrDefault();
             string top = topLevel?.Id;
@@ -140,6 +145,7 @@ namespace WoodFraming.Wpf
                 v.Shear = d;
                 v.ShearFromIn = Math.Max(0, (from - (builtLow - centreLow)) * 12);
                 v.ShearToIn = Math.Min(v.LengthFt * 12, (to - (builtLow - centreLow)) * 12);
+                v.Anchors = connections?.SillOf(w.Id, top)?.Anchors;
             }
             var own = lat.HoldownsOf(w.Id).Where(h => h.LevelId == null || h.LevelId == top).ToList();
             double partMid = d != null ? (v.ShearFromIn + v.ShearToIn) / 2 : v.LengthFt * 6;

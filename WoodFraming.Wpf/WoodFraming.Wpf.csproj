@@ -13,6 +13,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\WoodFraming\WoodFraming.csproj" />
+    <ProjectReference Include="..\WoodFraming.Connections\WoodFraming.Connections.csproj" />
     <!-- the 3D views' camera moves (OrbitMath), the same in every app -->
     <ProjectReference Include="..\..\BuildingModel\BuildingModel.Sketch\BuildingModel.Sketch.csproj" />
   </ItemGroup>

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The details that hold the building model together, kept apart from it (owner 2026-11-07: the model is the structure
+       and geometry; nails, nailing patterns and connections are a separate model item, so the model does not become a
+       god class): their project defaults ("ConnectionDefaults") and the lateral design's connections ("Connections"),
+       each its own section of the project file, keyed by the model's IDs. It reads the model; the model never reads it.
+       No UI, no design: the routines that size them are in WoodFraming and the apps. -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>WoodFraming.Connections</RootNamespace>
+    <AssemblyName>WoodFraming.Connections</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\BuildingModel\BuildingModel.Core\BuildingModel.Core.csproj" />
+    <Reference Include="System.Runtime.Serialization" />
+  </ItemGroup>
+
+</Project>

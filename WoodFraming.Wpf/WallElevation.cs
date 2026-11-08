@@ -6,6 +6,7 @@ using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Media3D;
 using BuildingModel.Model;
+using WoodFraming.Connections;
 
 namespace WoodFraming.Wpf
 {
@@ -224,7 +225,7 @@ namespace WoodFraming.Wpf
             }
 
             // the sill's anchor bolts (a first-story shear wall): each down into the concrete, a washer and nut on the sill
-            var an = shear ? d?.Anchors : null;
+            var an = shear ? v.Anchors : null;
             if (an != null && an.PositionsIn.Count > 0)
                 foreach (double ax in an.PositionsIn.Select(x => p0 + x))
                 {
@@ -339,7 +340,7 @@ namespace WoodFraming.Wpf
             }
             foreach (var a in v.Above)
                 g.Children.Add(Box(a.AlongIn - 0.625, H - 2, D + 0.05, a.AlongIn + 0.625, H + 18, D + 0.15, FramingMaterials.Strap));
-            var an = showShear ? v.Shear?.Anchors : null;
+            var an = showShear ? v.Anchors : null;
             if (an != null)
                 foreach (double ax in an.PositionsIn.Select(x => f.PartFrom + x))
                 {

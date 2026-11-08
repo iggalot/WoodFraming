@@ -19,6 +19,7 @@
     <ProjectReference Include="..\WoodFraming\WoodFraming.csproj" />
     <!-- the wall views (WallView, WallPanel), the same in every app -->
     <ProjectReference Include="..\WoodFraming.Wpf\WoodFraming.Wpf.csproj" />
+    <ProjectReference Include="..\WoodFraming.Connections\WoodFraming.Connections.csproj" />
   </ItemGroup>
 
 </Project>
