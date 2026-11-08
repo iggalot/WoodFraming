@@ -7,7 +7,10 @@
   does not bloat:
   - wall framing (`WallFraming`);
   - stud design (`StudDesign`: axial loads, every ASD combination, CD);
-  - sill anchorage (`SillAnchorage`).
+  - sill anchorage (`SillAnchorage`);
+  - an upper story's sill nailing through the floor sheathing (`SillNailing`: TR12 with the sheathing as the gap, the
+    owner's choice).
+
 
   Its data lives in the building model (stud size and spacing per wall and story, with the defaults in
   `ModelDefaults`). The design values come from `..\NDS_WoodLibrary`.
