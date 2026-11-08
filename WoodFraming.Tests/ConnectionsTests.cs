@@ -27,6 +27,10 @@ namespace WoodFraming.Tests
                     Shear = new Dictionary<string, double> { ["A (rigid)"] = 210.5 }, ShearAsdPlf = 126.3, Sheathing = "Sheathing", Nail = "8d",
                     BoundaryIn = 6, EdgesIn = 6, AllowablePlf = 215, CollectorLb = 1263 },
             },
+            Walls = new List<WallNailing>
+            {
+                new WallNailing { WallId = "w1", LevelId = "L2", Faces = { new FaceNailing { Nail = "8d common", EdgeIn = 4, FieldIn = 12 }, new FaceNailing() } },
+            },
         };
 
         [TestMethod]
@@ -45,6 +49,12 @@ namespace WoodFraming.Tests
             Assert.AreEqual(210.5, l.Shear["A (rigid)"], "the cases by name");
             Assert.AreEqual(1263, l.CollectorLb);
             Assert.IsNull(c.LineOf("L2", "w2"));
+            var n = c.NailingOf("w1", "L2");
+            Assert.AreEqual(2, n.Faces.Count, "both faces, in order");
+            Assert.AreEqual(4, n.Face(0).EdgeIn);
+            Assert.IsNull(n.Face(1).Nail, "the second face not nailed at a spacing (gypsum)");
+            Assert.IsNull(n.Face(2));
+            Assert.IsNull(c.NailingOf("w2", "R"));
             ConnectionsSection.Write(b, new ConnectionsSection());
             Assert.IsNull(b.GetData(ConnectionsSection.Key), "an empty one removes the section");
         }
@@ -94,6 +104,30 @@ namespace WoodFraming.Tests
             Assert.AreEqual(23.0 / 32, d.FloorSheathing, 1e-9, "missing: its starting value");
             ConnectionDefaults.Write(b, d);
             Assert.AreEqual("10d", ConnectionDefaults.Read(b).RoofNail, "written and read back");
+        }
+
+        /// <summary>The defaults window: it shows the project's values (one not offered kept as a choice), and its starting values are the defaults' own.</summary>
+        [STATestMethod]
+        public void TheDefaultsWindow_ShowsTheValues_KeepsOneNotOffered_StartsFromTheDefaults()
+        {
+            var d = new ConnectionDefaults { RoofNail = "10d", RoofBlocked = true, DiaphragmGrade = "StructuralI", FloorSheathing = 7.0 / 8, SillNail = "16d", DiaphragmFramingWidth = 3 };
+            var w = new WoodFraming.Wpf.ConnectionDefaultsWindow(d);
+            var v = w.Values();
+            Assert.AreEqual("10d", v.RoofNail);
+            Assert.IsTrue(v.RoofBlocked);
+            Assert.IsTrue(v.StructuralI);
+            Assert.AreEqual(7.0 / 8, v.FloorSheathing, 1e-9, "7/8\" is not offered: kept as it is");
+            Assert.AreEqual(3, v.DiaphragmFramingWidth);
+            Assert.AreNotSame(d, v, "a copy");
+            w.StartingValues();
+            var s = w.Values();
+            var start = new ConnectionDefaults();
+            Assert.AreEqual(start.RoofNail, s.RoofNail);
+            Assert.AreEqual(start.RoofBlocked, s.RoofBlocked);
+            Assert.AreEqual(start.FloorSheathing, s.FloorSheathing, 1e-9);
+            Assert.AreEqual(start.DiaphragmGrade, s.DiaphragmGrade);
+            Assert.AreEqual(start.DiaphragmFramingWidth, s.DiaphragmFramingWidth);
+            w.Close();
         }
     }
 }

@@ -63,6 +63,8 @@ namespace WoodFraming.Wpf
         public ShearWallDesign Shear { get; set; }
         /// <summary>A first-story shear wall's sill anchor bolts as designed (the "Connections" section; null: none).</summary>
         public SillAnchors Anchors { get; set; }
+        /// <summary>Its sheathing nailing, face by face as <see cref="ShearWallDesign.Faces"/> (the "Connections" section; null: none).</summary>
+        public WallNailing Nailing { get; set; }
         /// <summary>The shear part (in from the low end as built).</summary>
         public double ShearFromIn { get; set; }
         public double ShearToIn { get; set; }
@@ -103,7 +105,7 @@ namespace WoodFraming.Wpf
         /// <summary>
         /// The view of <paramref name="w"/> on the story under <paramref name="levelId"/> (see <see cref="StoryTop"/>), from
         /// the model and its lateral design (<paramref name="lat"/>: the saved one when null; an app passes its live one), and
-        /// the connections the design gave it (<paramref name="connections"/>, the same: its sill's anchor bolts).
+        /// the connections the design gave it (<paramref name="connections"/>, the same: its sill's anchor bolts, its nailing).
         /// </summary>
         public static WallView FromModel(Building b, Wall w, string levelId = null, LateralSection lat = null, ConnectionsSection connections = null)
         {
@@ -146,6 +148,7 @@ namespace WoodFraming.Wpf
                 v.ShearFromIn = Math.Max(0, (from - (builtLow - centreLow)) * 12);
                 v.ShearToIn = Math.Min(v.LengthFt * 12, (to - (builtLow - centreLow)) * 12);
                 v.Anchors = connections?.SillOf(w.Id, top)?.Anchors;
+                v.Nailing = connections?.NailingOf(w.Id, top);
             }
             var own = lat.HoldownsOf(w.Id).Where(h => h.LevelId == null || h.LevelId == top).ToList();
             double partMid = d != null ? (v.ShearFromIn + v.ShearToIn) / 2 : v.LengthFt * 6;

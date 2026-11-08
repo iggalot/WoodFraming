@@ -20,18 +20,21 @@
   references only BuildingModel.Core; the model never references it. Two sections of the project file, keyed by the
   model's ids:
   - `ConnectionsSection` ("Connections", written by the Shear Wall Calculator, in its `OwnsData`): each shear wall
-    story's sill (`SillConnection`: the first story's `SillAnchors`, an upper story's `SillNails`) and each diaphragm's
+    story's sheathing nailing (`WallNailing`, a `FaceNailing` per face in the order of the model's
+    `ShearWallDesign.Faces`; the sheathing itself is the model's), its sill (`SillConnection`: the first story's
+    `SillAnchors`, an upper story's `SillNails`) and each diaphragm's
     lines of shear walls (`DiaphragmLine`: line shear, boundary nailing, collector). `Describe` and `Describer` give a
     `ShearPair` its connector in words (for `ShearPairs.Of`).
   - `ConnectionDefaults` ("ConnectionDefaults"): the floor and roof sheathing, nails, blocking, framing width, sill
     nail, splice nail. `Start()` is the only place the starting values are written; a value missing from the file
-    keeps its starting value. Nobody writes it yet (a page to edit it is on the ROADMAP).
+    keeps its starting value. Edited in `WoodFraming.Wpf.ConnectionDefaultsWindow` (part of the connection details, owner
+    2026-11-08), which the Shear Wall Calculator opens (Details > Connection defaults) and saves with its own data.
   - The forces are not here: the hold-downs and pairs stay in the model's `Lateral` section, since they carry the load
     through the building.
   - A new project in an SDK solution here restores offline: `-restore -p:RestoreSources=<an empty folder>` (it has no
     packages).
 - `WoodFraming.Wpf`: the 3D framing (`Framing3D`), and **the wall window of every app**: `WallView` (plain data,
-  made from the model, its `Lateral` section and the `Connections` (the sill's bolts) by `WallViews.FromModel`), `WallElevation`, `WallModel3D`, `WallPanel`
+  made from the model, its `Lateral` section and the `Connections` (the face nailing, the sill's bolts) by `WallViews.FromModel`), `WallElevation`, `WallModel3D`, `WallPanel`
   (Elevation and 3D, the **Shear wall** toggle, on by default) and `WallWindow`. The Building Model opens `WallWindow`;
   the Shear Wall Calculator's construction window hosts `WallPanel` and adds its own tabs. They draw the data; they
   calculate nothing. A change to how a wall is drawn goes here, for every app.

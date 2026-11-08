@@ -85,6 +85,7 @@ namespace WoodFraming.Wpf
         private readonly WallView v;
         private readonly WallFraming f;
         private readonly ShearFace face;
+        private readonly FaceNailing nailing;
         private readonly string note;
         private readonly bool nails, shear;
 
@@ -105,6 +106,7 @@ namespace WoodFraming.Wpf
             shear = showShear && view?.Shear != null;
             var faces = view?.Shear?.Faces ?? new List<ShearFace>();
             face = shear && faceIndex >= 0 && faceIndex < faces.Count ? faces[faceIndex] : null;
+            nailing = face != null ? view.Nailing?.Face(faceIndex) : null;
             note = shear && faceIndex == 1 && faces.Count < 2 ? "This wall has one sheathed face." : null;
             nails = showNails;
             SnapsToDevicePixels = true;
@@ -183,9 +185,9 @@ namespace WoodFraming.Wpf
                     dc.DrawRectangle(face.Gypsum ? GypsumFill : SheetFill, SheetEdge, rr);
                     if (rr.Width > 60 && rr.Height > 30)
                         WallInk.Label(dc, this, $"{FtIn.Of(sh.Width)} × {FtIn.Of(sh.Height)}", new Point(rr.X + rr.Width / 2, rr.Y + Math.Min(rr.Height / 2, 40)), SheetInk, 9.5, centre: true);
-                    if (nails && face.EdgeIn > 0)
+                    if (nails && nailing != null && nailing.EdgeIn > 0)
                     {
-                        var (edge, field) = f.Nails(sh, face.EdgeIn, face.FieldIn > 0 ? face.FieldIn : 12);
+                        var (edge, field) = f.Nails(sh, nailing.EdgeIn, nailing.FieldIn > 0 ? nailing.FieldIn : 12);
                         double re = Math.Max(1.1, Math.Min(2.2, 0.28 * s)), rf = re * 0.8;
                         foreach (var n in edge) dc.DrawEllipse(EdgeNail, null, new Point(X(n.X), Y(n.Y)), re, re);
                         foreach (var n in field) dc.DrawEllipse(FieldNail, null, new Point(X(n.X), Y(n.Y)), rf, rf);
@@ -286,8 +288,8 @@ namespace WoodFraming.Wpf
             if (face != null)
             {
                 Callout(face.Sheathing ?? "Sheathing", Y(H * 0.80), X(Math.Max(p0, p1 - 6)));
-                if (face.Nail != null && face.EdgeIn > 0)
-                    WallInk.Label(dc, this, $"{face.Nail} @ {face.EdgeIn:0.#}\" edges / {(face.FieldIn > 0 ? face.FieldIn : 12):0.#}\" field", new Point(cx, Y(H * 0.80) + 8), WallInk.Secondary, 10);
+                if (nailing?.Nail != null && nailing.EdgeIn > 0)
+                    WallInk.Label(dc, this, $"{nailing.Nail} @ {nailing.EdgeIn:0.#}\" edges / {(nailing.FieldIn > 0 ? nailing.FieldIn : 12):0.#}\" field", new Point(cx, Y(H * 0.80) + 8), WallInk.Secondary, 10);
                 if (nails)
                 {
                     dc.DrawEllipse(EdgeNail, null, new Point(cx + 4, yb + 72), 2, 2);

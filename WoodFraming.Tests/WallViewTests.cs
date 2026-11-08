@@ -57,11 +57,15 @@ namespace WoodFraming.Tests
             lat.Walls.Add(new ShearWallDesign
             {
                 WallId = w2.Id, LevelId = l3.Id, X0 = 4, Y0 = 0, X1 = 16, Y1 = 0, ArmIn = 139.5, Check = "OK: v = 210 plf of 340 plf",
-                Faces = { new ShearFace { Sheathing = "Structural I 15/32\"", ThicknessIn = 0.469, Nail = "8d common", EdgeIn = 6, FieldIn = 12 } },
+                Faces = { new ShearFace { Sheathing = "Structural I 15/32\"", ThicknessIn = 0.469 } },
             });
             lat.Holdowns.Add(new StoryHoldown { From = $"{w2.Id} west end", WallId = w2.Id, X = 4.25, Y = 0, LevelId = l3.Id, OntoLevelId = l2.Id, Connector = "MSTC40", TensionAsd = 1800, Onto = $"wall {w1.Id}", PostAlongWall = 3, Family = "strap" });
             lat.Holdowns.Add(new StoryHoldown { From = $"{w2.Id} east end", WallId = w2.Id, X = 15.75, Y = 0, LevelId = l3.Id, OntoLevelId = l2.Id, Connector = "MSTC40", TensionAsd = 1800, Onto = $"wall {w1.Id}", PostAlongWall = 3, Family = "strap" });
             LateralSection.Write(b, lat);
+            // its nailing: a connection detail, not the model's (WoodFraming.Connections)
+            var con = new WoodFraming.Connections.ConnectionsSection();
+            con.Walls.Add(new WoodFraming.Connections.WallNailing { WallId = w2.Id, LevelId = l3.Id, Faces = { new WoodFraming.Connections.FaceNailing { Nail = "8d common", EdgeIn = 6, FieldIn = 12 } } });
+            WoodFraming.Connections.ConnectionsSection.Write(b, con);
             return (b, w1, w2, l2, l3);
         }
 
@@ -81,6 +85,8 @@ namespace WoodFraming.Tests
             Assert.AreEqual(189, v.Holdowns.Single(h => !h.Low).AlongIn, 1e-9);
             Assert.IsTrue(v.Holdowns.All(h => h.Strap && h.Onto == $"wall {w1.Id}"));
             Assert.AreEqual(3, v.PostAlongWall);
+            Assert.AreEqual(6, v.Nailing.Face(0).EdgeIn, "its face nailing, from the Connections");
+            Assert.IsNull(v.Nailing.Face(1), "one face");
             var f = v.Framing();
             Assert.AreEqual(48, f.PartFrom);
             Assert.AreEqual(192, f.PartTo);

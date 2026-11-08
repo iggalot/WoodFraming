@@ -30,8 +30,14 @@ namespace WoodFraming.Connections
         [DataMember(Order = 4, EmitDefaultValue = false)] public List<SillConnection> Sills { get; set; } = new List<SillConnection>();
         /// <summary>Each diaphragm's lines of shear walls (<see cref="DiaphragmLine"/>).</summary>
         [DataMember(Order = 5, EmitDefaultValue = false)] public List<DiaphragmLine> DiaphragmLines { get; set; } = new List<DiaphragmLine>();
+        /// <summary>Each shear wall story's sheathing nailing, face by face (<see cref="WallNailing"/>; the sheathing itself is the model's).</summary>
+        [DataMember(Order = 6, EmitDefaultValue = false)] public List<WallNailing> Walls { get; set; } = new List<WallNailing>();
 
-        public bool IsEmpty => (Sills == null || Sills.Count == 0) && (DiaphragmLines == null || DiaphragmLines.Count == 0);
+        public bool IsEmpty => (Sills == null || Sills.Count == 0) && (DiaphragmLines == null || DiaphragmLines.Count == 0) && (Walls == null || Walls.Count == 0);
+
+        /// <summary>The sheathing nailing of <paramref name="wallId"/>'s story under <paramref name="storyLevelId"/> (null: none).</summary>
+        public WallNailing NailingOf(string wallId, string storyLevelId) =>
+            (Walls ?? new List<WallNailing>()).FirstOrDefault(s => s.WallId == wallId && (s.LevelId == null || storyLevelId == null || s.LevelId == storyLevelId));
 
         /// <summary>The sill of <paramref name="wallId"/>'s story under <paramref name="storyLevelId"/> (the level on top of it).</summary>
         public SillConnection SillOf(string wallId, string storyLevelId) =>
@@ -103,6 +109,33 @@ namespace WoodFraming.Connections
 
         /// <summary>Writes it into the building's data (null or empty: removes it).</summary>
         public static void Write(Building b, ConnectionsSection s) => b?.SetData(Key, s == null || s.IsEmpty ? null : s.ToJson());
+    }
+
+    /// <summary>
+    /// One shear wall story's sheathing nailing: a <see cref="FaceNailing"/> for each face of the model's
+    /// <see cref="ShearWallDesign.Faces"/>, in the same order.
+    /// </summary>
+    [DataContract]
+    public sealed class WallNailing
+    {
+        [DataMember(Order = 1)] public string WallId { get; set; }
+        /// <summary>The level on top of the wall's story.</summary>
+        [DataMember(Order = 2)] public string LevelId { get; set; }
+        [DataMember(Order = 3)] public List<FaceNailing> Faces { get; set; } = new List<FaceNailing>();
+
+        /// <summary>Face <paramref name="i"/>'s nailing (null: none, or not nailed at a spacing).</summary>
+        public FaceNailing Face(int i) => Faces != null && i >= 0 && i < Faces.Count ? Faces[i] : null;
+    }
+
+    /// <summary>One face's nails as designed.</summary>
+    [DataContract]
+    public sealed class FaceNailing
+    {
+        /// <summary>"8d common"; null when it is not nailed at a spacing (gypsum, plaster).</summary>
+        [DataMember(Order = 1, EmitDefaultValue = false)] public string Nail { get; set; }
+        /// <summary>The nails' spacing (in) at the panel edges and in the field (0: not nailed at a spacing).</summary>
+        [DataMember(Order = 2, EmitDefaultValue = false)] public double EdgeIn { get; set; }
+        [DataMember(Order = 3, EmitDefaultValue = false)] public double FieldIn { get; set; }
     }
 
     /// <summary>One shear wall story's sill as designed: its anchor bolts (on the foundation) or its nailing (on a floor).</summary>
