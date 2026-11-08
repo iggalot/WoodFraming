@@ -12,6 +12,8 @@
     owner's choice).
   - a double top plate as a diaphragm collector (`TopPlateCollector`: one ply in tension and compression, the splice
     nails).
+  - the rim or the roof's blocking toe-nailed into a wall's top plates (`RimToPlate`: NDS Figure 12A's geometry for the
+    yield equations and Ctn 0.83, the owner's choice).
 
   Its framing data lives in the building model (stud size and spacing per wall and story, with the defaults in
   `ModelDefaults`). The design values come from `..\NDS_WoodLibrary`.
@@ -22,11 +24,12 @@
   - `ConnectionsSection` ("Connections", written by the Shear Wall Calculator, in its `OwnsData`): each shear wall
     story's sheathing nailing (`WallNailing`, a `FaceNailing` per face in the order of the model's
     `ShearWallDesign.Faces`; the sheathing itself is the model's), its sill (`SillConnection`: the first story's
-    `SillAnchors`, an upper story's `SillNails`) and each diaphragm's
+    `SillAnchors`, an upper story's `SillNails`), its top (`TopConnection`: the rim or blocking toe-nailed into its plates)
+    and each diaphragm's
     lines of shear walls (`DiaphragmLine`: line shear, boundary nailing, collector). `Describe` and `Describer` give a
     `ShearPair` its connector in words (for `ShearPairs.Of`).
   - `ConnectionDefaults` ("ConnectionDefaults"): the floor and roof sheathing, nails, blocking, framing width, sill
-    nail, splice nail. `Start()` is the only place the starting values are written; a value missing from the file
+    nail, splice nail, toe-nail. `Start()` is the only place the starting values are written; a value missing from the file
     keeps its starting value. Edited in `WoodFraming.Wpf.ConnectionDefaultsWindow` (part of the connection details, owner
     2026-11-08), which the Shear Wall Calculator opens (Details > Connection defaults) and saves with its own data.
   - The forces are not here: the hold-downs and pairs stay in the model's `Lateral` section, since they carry the load

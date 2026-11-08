@@ -32,8 +32,15 @@ namespace WoodFraming.Connections
         [DataMember(Order = 5, EmitDefaultValue = false)] public List<DiaphragmLine> DiaphragmLines { get; set; } = new List<DiaphragmLine>();
         /// <summary>Each shear wall story's sheathing nailing, face by face (<see cref="WallNailing"/>; the sheathing itself is the model's).</summary>
         [DataMember(Order = 6, EmitDefaultValue = false)] public List<WallNailing> Walls { get; set; } = new List<WallNailing>();
+        /// <summary>Each shear wall story's top: the rim or blocking toe-nailed into its plates (<see cref="TopConnection"/>).</summary>
+        [DataMember(Order = 7, EmitDefaultValue = false)] public List<TopConnection> Tops { get; set; } = new List<TopConnection>();
 
-        public bool IsEmpty => (Sills == null || Sills.Count == 0) && (DiaphragmLines == null || DiaphragmLines.Count == 0) && (Walls == null || Walls.Count == 0);
+        public bool IsEmpty => (Sills == null || Sills.Count == 0) && (DiaphragmLines == null || DiaphragmLines.Count == 0) && (Walls == null || Walls.Count == 0) &&
+                               (Tops == null || Tops.Count == 0);
+
+        /// <summary>The top of <paramref name="wallId"/>'s story under <paramref name="storyLevelId"/> (null: none).</summary>
+        public TopConnection TopOf(string wallId, string storyLevelId) =>
+            (Tops ?? new List<TopConnection>()).FirstOrDefault(s => s.WallId == wallId && (s.LevelId == null || storyLevelId == null || s.LevelId == storyLevelId));
 
         /// <summary>The sheathing nailing of <paramref name="wallId"/>'s story under <paramref name="storyLevelId"/> (null: none).</summary>
         public WallNailing NailingOf(string wallId, string storyLevelId) =>
@@ -58,8 +65,12 @@ namespace WoodFraming.Connections
             if (p.AtTop)
             {
                 var l = LineOf(p.LevelId, p.WallId);
-                if (l == null || l.BoundaryIn <= 0) return p.Connector;
-                string s = $"the {level} diaphragm's boundary nailing, {l.Nailing}, into the top plates (the collector {l.CollectorLb:0} lb ASD)";
+                var top = TopOf(p.WallId, p.StoryLevelId ?? p.LevelId);
+                string toe = top == null || top.SpacingIn <= 0 ? null :
+                    $", toe-nailed to them with {top.Nail} at {top.SpacingIn.ToString("0.#", CultureInfo.InvariantCulture)}\" o.c.{(top.Fails == null ? "" : ": " + top.Fails)}";
+                if (l == null || l.BoundaryIn <= 0)
+                    return toe == null ? p.Connector : $"the {level} {top.Member} on the top plates{toe}";
+                string s = $"the {level} diaphragm's boundary nailing, {l.Nailing}, into the {(top?.Member ?? (l.Roof ? "blocking" : "rim"))} over the top plates (the collector {l.CollectorLb:0} lb ASD){toe ?? ""}";
                 return l.Fails == null ? s : $"{s}: {l.Fails}";
             }
             var sill = SillOf(p.WallId, p.StoryLevelId);
@@ -136,6 +147,27 @@ namespace WoodFraming.Connections
         /// <summary>The nails' spacing (in) at the panel edges and in the field (0: not nailed at a spacing).</summary>
         [DataMember(Order = 2, EmitDefaultValue = false)] public double EdgeIn { get; set; }
         [DataMember(Order = 3, EmitDefaultValue = false)] public double FieldIn { get; set; }
+    }
+
+    /// <summary>
+    /// One shear wall story's top as designed: the rim (a floor) or the blocking (the roof) toe-nailed into its double top
+    /// plate for the wall's top shear over its shear part (WoodFraming.RimToPlate).
+    /// </summary>
+    [DataContract]
+    public sealed class TopConnection
+    {
+        [DataMember(Order = 1)] public string WallId { get; set; }
+        /// <summary>The level on top of the wall's story.</summary>
+        [DataMember(Order = 2)] public string LevelId { get; set; }
+        [DataMember(Order = 3, EmitDefaultValue = false)] public bool Blocking { get; set; }
+        /// <summary>"8d common", its spacing (in), one toe-nail's Z' (lb, ASD: × CD 1.6 × Ctn 0.83).</summary>
+        [DataMember(Order = 4)] public string Nail { get; set; }
+        [DataMember(Order = 5)] public double SpacingIn { get; set; }
+        [DataMember(Order = 6)] public double ZPrimeLb { get; set; }
+        /// <summary>What does not work (null: it works).</summary>
+        [DataMember(Order = 7, EmitDefaultValue = false)] public string Fails { get; set; }
+
+        public string Member => Blocking ? "blocking" : "rim";
     }
 
     /// <summary>One shear wall story's sill as designed: its anchor bolts (on the foundation) or its nailing (on a floor).</summary>

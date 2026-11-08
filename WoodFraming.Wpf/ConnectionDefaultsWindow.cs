@@ -21,11 +21,12 @@ namespace WoodFraming.Wpf
         public static readonly string[] DiaphragmNails = { "6d", "8d", "10d" };
         public static readonly string[] SillNails = { "10d", "12d", "16d", "20d" };
         public static readonly string[] SpliceNails = { "10d", "12d", "16d" };
+        public static readonly string[] ToeNails = { "8d", "10d", "12d", "16d" };
         public static readonly double[] FramingWidths = { 2, 3 };
         private static readonly (string Key, string Name)[] Grades = { ("SheathingAndSingleFloor", "Sheathing and Single-Floor"), ("StructuralI", "Structural I") };
 
         private readonly ComboBox grade = new ComboBox(), floorT = new ComboBox(), floorNail = new ComboBox(), roofT = new ComboBox(), roofNail = new ComboBox(),
-                                  width = new ComboBox(), sillNail = new ComboBox(), spliceNail = new ComboBox();
+                                  width = new ComboBox(), sillNail = new ComboBox(), spliceNail = new ComboBox(), toeNail = new ComboBox();
         private readonly CheckBox floorBlocked = new CheckBox { Content = "Blocked (SDPWS Table 4.2A; unblocked: 4.2C)" },
                                   roofBlocked = new CheckBox { Content = "Blocked (SDPWS Table 4.2A; unblocked: 4.2C)" };
         private ConnectionDefaults shown;
@@ -75,6 +76,7 @@ namespace WoodFraming.Wpf
             Heading("Walls");
             Add("Upper sill nail", sillNail, "An upper story's shear wall sill, nailed through the floor sheathing into the rim or blocking (AWC TR12, the sheathing as the gap).");
             Add("Top plate splice nail", spliceNail, "The face nails lapping the double top plate's plies at a splice, where it is a collector.");
+            Add("Rim or blocking toe-nail", toeNail, "The rim (a floor) or the roof's blocking toe-nailed down into the top plates of the wall under it (NDS 12.1.6.3, Ctn 0.83).");
 
             var note = new TextBlock
             {
@@ -142,6 +144,7 @@ namespace WoodFraming.Wpf
             Fill(width, FramingWidths, d.DiaphragmFramingWidth, w => $"{w:0}\" nominal", Near);
             Fill(sillNail, SillNails, d.SillNail, n => $"{n} common", Same);
             Fill(spliceNail, SpliceNails, d.SpliceNail, n => $"{n} common", Same);
+            Fill(toeNail, ToeNails, d.ToeNail, n => $"{n} common", Same);
         }
 
         /// <summary>The program's starting values (<see cref="ConnectionDefaults"/>), shown to keep or cancel.</summary>
@@ -161,6 +164,7 @@ namespace WoodFraming.Wpf
             d.DiaphragmFramingWidth = Picked(width, d.DiaphragmFramingWidth);
             d.SillNail = Picked(sillNail, d.SillNail);
             d.SpliceNail = Picked(spliceNail, d.SpliceNail);
+            d.ToeNail = Picked(toeNail, d.ToeNail);
             return d;
         }
 

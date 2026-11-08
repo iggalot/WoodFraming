@@ -34,6 +34,8 @@ namespace WoodFraming.Connections
         [DataMember(Order = 9)] public double DiaphragmFramingWidth { get; set; }
         /// <summary>The nail lapping a double top plate at a splice where the plates are a collector.</summary>
         [DataMember(Order = 10)] public string SpliceNail { get; set; }
+        /// <summary>The toe-nail of a rim (or the roof's blocking) into the top plates of the wall under it (NDS 12.1.6.3).</summary>
+        [DataMember(Order = 11)] public string ToeNail { get; set; }
 
         public ConnectionDefaults() => Start();
 
@@ -50,6 +52,7 @@ namespace WoodFraming.Connections
             RoofBlocked = false;
             DiaphragmFramingWidth = 2;
             SpliceNail = "16d";
+            ToeNail = "8d";
         }
 
         [OnDeserializing]

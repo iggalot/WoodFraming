@@ -65,6 +65,8 @@ namespace WoodFraming.Wpf
         public SillAnchors Anchors { get; set; }
         /// <summary>Its sheathing nailing, face by face as <see cref="ShearWallDesign.Faces"/> (the "Connections" section; null: none).</summary>
         public WallNailing Nailing { get; set; }
+        /// <summary>The rim or blocking toe-nailed into its top plates (the "Connections" section; null: none).</summary>
+        public TopConnection Top { get; set; }
         /// <summary>The shear part (in from the low end as built).</summary>
         public double ShearFromIn { get; set; }
         public double ShearToIn { get; set; }
@@ -149,6 +151,7 @@ namespace WoodFraming.Wpf
                 v.ShearToIn = Math.Min(v.LengthFt * 12, (to - (builtLow - centreLow)) * 12);
                 v.Anchors = connections?.SillOf(w.Id, top)?.Anchors;
                 v.Nailing = connections?.NailingOf(w.Id, top);
+                v.Top = connections?.TopOf(w.Id, top);
             }
             var own = lat.HoldownsOf(w.Id).Where(h => h.LevelId == null || h.LevelId == top).ToList();
             double partMid = d != null ? (v.ShearFromIn + v.ShearToIn) / 2 : v.LengthFt * 6;

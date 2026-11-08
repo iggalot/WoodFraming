@@ -31,6 +31,11 @@ namespace WoodFraming.Tests
             {
                 new WallNailing { WallId = "w1", LevelId = "L2", Faces = { new FaceNailing { Nail = "8d common", EdgeIn = 4, FieldIn = 12 }, new FaceNailing() } },
             },
+            Tops = new List<TopConnection>
+            {
+                new TopConnection { WallId = "w2", LevelId = "R", Blocking = true, Nail = "8d common", SpacingIn = 7.5, ZPrimeLb = 129.0 },
+                new TopConnection { WallId = "w1", LevelId = "L2", Nail = "8d common", SpacingIn = 6, ZPrimeLb = 129.0 },
+            },
         };
 
         [TestMethod]
@@ -55,6 +60,10 @@ namespace WoodFraming.Tests
             Assert.IsNull(n.Face(1).Nail, "the second face not nailed at a spacing (gypsum)");
             Assert.IsNull(n.Face(2));
             Assert.IsNull(c.NailingOf("w2", "R"));
+            Assert.IsTrue(c.TopOf("w2", "R").Blocking, "the roof's blocking");
+            Assert.AreEqual(7.5, c.TopOf("w2", "R").SpacingIn);
+            Assert.AreEqual("rim", c.TopOf("w1", "L2").Member);
+            Assert.IsNull(c.TopOf("w1", "R"));
             ConnectionsSection.Write(b, new ConnectionsSection());
             Assert.IsNull(b.GetData(ConnectionsSection.Key), "an empty one removes the section");
         }
@@ -70,7 +79,10 @@ namespace WoodFraming.Tests
             Assert.AreEqual("16d common at 6\" o.c. through the L2 floor's sheathing into the rim or blocking", Words(nails));
             var top = new ShearPair { WallId = "w2", LevelId = "R", StoryLevelId = "R", AtTop = true, Connector = "generic" };
             StringAssert.StartsWith(Words(top), "the R diaphragm's boundary nailing, ");
-            StringAssert.Contains(Words(top), "(the collector 1263 lb ASD)");
+            StringAssert.Contains(Words(top), "into the blocking over the top plates (the collector 1263 lb ASD), toe-nailed to them with 8d common at 7.5\" o.c.");
+            // a top with no diaphragm line designed: the toe-nailing alone
+            var lower = new ShearPair { WallId = "w1", LevelId = "L2", StoryLevelId = "L2", AtTop = true, Connector = "generic" };
+            Assert.AreEqual("the L2 rim on the top plates, toe-nailed to them with 8d common at 6\" o.c.", Words(lower));
             // nothing designed for it: the pair's own words
             var none = new ShearPair { WallId = "w9", LevelId = "R", StoryLevelId = "R", AtTop = true, Connector = "generic" };
             Assert.AreEqual("generic", Words(none));
@@ -94,6 +106,7 @@ namespace WoodFraming.Tests
             Assert.IsFalse(d.RoofBlocked);
             Assert.AreEqual(2, d.DiaphragmFramingWidth);
             Assert.AreEqual("16d", d.SpliceNail);
+            Assert.AreEqual("8d", d.ToeNail);
             Assert.IsFalse(d.StructuralI);
             b.SetData(ConnectionDefaults.Key, "{\"RoofNail\":\"10d\",\"DiaphragmGrade\":\"StructuralI\"}");
             d = ConnectionDefaults.Read(b);

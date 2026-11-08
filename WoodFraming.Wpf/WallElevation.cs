@@ -278,6 +278,9 @@ namespace WoodFraming.Wpf
             }
             string sz = f.StudSize;
             Callout($"Double top plate, 2-{sz} flat", Y(H - WallFraming.Ply), X(L - 2));
+            var toe = shear ? v.Top : null;
+            if (toe != null && toe.SpacingIn > 0)
+                WallInk.Label(dc, this, $"{(toe.Blocking ? "Blocking" : "Rim")} toe-nailed down: {toe.Nail} @ {toe.SpacingIn:0.#}\" o.c.{(toe.Fails != null ? " (fails)" : "")}", new Point(cx, Y(H - WallFraming.Ply) + 8), WallInk.Secondary, 10);
             if (studs.Count > 0) Callout($"{sz} studs @ {f.Spacing:0}\" o.c., {FtIn.Of(studs[0].Length)}", Y(H * 0.62), X(studs.Last().CenterX));
             if (v.IsShearWall) Callout($"Hold-down post, {f.PostPlies}-{sz}", Y(H * 0.44), X(p1 - post / 2));
             var blk = f.Pieces.FirstOrDefault(p => p.Kind == FramingKind.Blocking);
