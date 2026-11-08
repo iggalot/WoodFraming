@@ -10,6 +10,8 @@
   - sill anchorage (`SillAnchorage`);
   - an upper story's sill nailing through the floor sheathing (`SillNailing`: TR12 with the sheathing as the gap, the
     owner's choice).
+  - a double top plate as a diaphragm collector (`TopPlateCollector`: one ply in tension and compression, the splice
+    nails).
 
 
   Its data lives in the building model (stud size and spacing per wall and story, with the defaults in
