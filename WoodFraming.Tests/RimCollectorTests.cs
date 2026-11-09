@@ -32,5 +32,25 @@ namespace WoodFraming.Tests
             StringAssert.Contains(RimCollector.Design(1000, Species.SouthernPine, Grade.No2, "2x10").Fails, "not read into this library yet");
             StringAssert.Contains(RimCollector.Design(1000, Species.DouglasFirLarch, Grade.No2, "2x14").Fails, "Not a size here");
         }
+
+        /// <summary>
+        /// Every joist depth the rim can be, DF-L No. 2 (Ft 575, Fc 1350 psi), CD 1.6, Table 4A's CF (Ft, Fc):
+        /// 2x4 5.25 in² (1.5, 1.15): T = 575 × 1.6 × 1.5 × 5.25 = 7245, C = 1350 × 1.6 × 1.15 × 5.25 = 13,041;
+        /// 2x6 8.25 in² (1.3, 1.1): 9867, 19,602; 2x8 10.875 in² (1.2, 1.05): 12,006, 24,664.5;
+        /// 2x10 13.875 in² (1.1, 1.0): 14,041.5, 29,970; 2x12 16.875 in² (1.0, 1.0): 15,525, 36,450.
+        /// </summary>
+        [TestMethod]
+        [DataRow("2x4", 7245.0, 13041.0)]
+        [DataRow("2x6", 9867.0, 19602.0)]
+        [DataRow("2x8", 12006.0, 24664.5)]
+        [DataRow("2x10", 14041.5, 29970.0)]
+        [DataRow("2x12", 15525.0, 36450.0)]
+        public void EveryJoistSize_HandCalc(string nominal, double tension, double compression)
+        {
+            var c = RimCollector.Design(1000, Species.DouglasFirLarch, Grade.No2, nominal);
+            Assert.IsNull(c.Fails, c.Fails);
+            Assert.AreEqual(tension, c.TensionLb, 1e-6, nominal);
+            Assert.AreEqual(compression, c.CompressionLb, 1e-6, nominal);
+        }
     }
 }
