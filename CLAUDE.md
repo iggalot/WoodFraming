@@ -13,7 +13,9 @@
   - a double top plate as a diaphragm collector (`TopPlateCollector`: one ply in tension and compression, the splice
     nails).
   - a floor's rim as the collector where no wall is under the line (`RimCollector`: one ply of the joists' depth,
-    `ModelDefaults.FloorJoistSize`; a strap across each butt splice for the whole force).
+    `ModelDefaults.FloorJoistSize`; a strap across each butt splice for the whole force), and the roof's continuous
+    blocking the same where no wall is under the roof's line or edge (member "blocking", `ModelDefaults.RoofBlockingSize`;
+    a strap across every joint; `BlockingCitations`).
   - the rim or the roof's blocking toe-nailed into a wall's top plates (`RimToPlate`: NDS Figure 12A's geometry for the
     yield equations and Ctn 0.83, the owner's choice).
 
@@ -29,7 +31,7 @@
     `SillAnchors`, an upper story's `SillNails`), its top (`TopConnection`: the rim or blocking toe-nailed into its plates)
     and each diaphragm's
     lines of shear walls (`DiaphragmLine`: line shear, boundary nailing, collector) and chords (`DiaphragmChord`, span by
-    span between the lines; `ChordsOn` a wall's). `Describe` and `Describer` give a
+    span between the lines, with its two field nailing zones; `ChordsOn` a wall's). `Describe` and `Describer` give a
     `ShearPair` its connector in words (for `ShearPairs.Of`).
   - `ConnectionDefaults` ("ConnectionDefaults"): the floor and roof sheathing, nails, blocking, framing width, sill
     nail, splice nail, toe-nail. `Start()` is the only place the starting values are written; a value missing from the file

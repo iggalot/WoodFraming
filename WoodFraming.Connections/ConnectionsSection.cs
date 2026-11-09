@@ -185,9 +185,19 @@ namespace WoodFraming.Connections
         [DataMember(Order = 14)] public List<string> WallIds { get; set; } = new List<string>();
         /// <summary>What carries it at each edge, in words.</summary>
         [DataMember(Order = 15, EmitDefaultValue = false)] public string Chord { get; set; }
-        /// <summary>Where an edge's chord is the floor's rim: the strap at each of its splices (lb, ASD).</summary>
+        /// <summary>Where an edge's chord is the floor's rim or the roof's blocking: the strap at each of its splices or joints (lb, ASD).</summary>
         [DataMember(Order = 16, EmitDefaultValue = false)] public double StrapLb { get; set; }
         [DataMember(Order = 17, EmitDefaultValue = false)] public string Fails { get; set; }
+        /// <summary>
+        /// The span's field nailing zones (owner 2026-11-09): within <see cref="HeavyFromFt"/> of the line at <see cref="FromFt"/>
+        /// (and <see cref="HeavyToFt"/> of the one at <see cref="ToFt"/>) that line's nailing, the lightest row beyond
+        /// (<see cref="LightNailing"/>, <see cref="LightAllowablePlf"/> ASD). 0: no heavy zone there (the line's nailing is the
+        /// lightest, or no line at that end).
+        /// </summary>
+        [DataMember(Order = 18, EmitDefaultValue = false)] public string LightNailing { get; set; }
+        [DataMember(Order = 19, EmitDefaultValue = false)] public double LightAllowablePlf { get; set; }
+        [DataMember(Order = 20, EmitDefaultValue = false)] public double HeavyFromFt { get; set; }
+        [DataMember(Order = 21, EmitDefaultValue = false)] public double HeavyToFt { get; set; }
     }
 
     /// <summary>
