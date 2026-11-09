@@ -15,7 +15,9 @@
   - a floor's rim as the collector where no wall is under the line (`RimCollector`: one ply of the joists' depth,
     `ModelDefaults.FloorJoistSize`; a strap across each butt splice for the whole force), and the roof's continuous
     blocking the same where no wall is under the roof's line or edge (member "blocking", `ModelDefaults.RoofBlockingSize`;
-    a strap across every joint; `BlockingCitations`).
+    a strap across every joint; `BlockingCitations`). The strap and the framing plates (LTP4) are picked from the Simpson catalog in
+    the Shear Wall Calculator (`SpliceStrap`, `TopClip`): this library holds what was picked (`DiaphragmLine.Strap`,
+    `DiaphragmChord.Strap`, `TopConnection.Clip`, `Tie`).
   - the rim or the roof's blocking toe-nailed into a wall's top plates (`RimToPlate`: NDS Figure 12A's geometry for the
     yield equations and Ctn 0.83, the owner's choice).
 

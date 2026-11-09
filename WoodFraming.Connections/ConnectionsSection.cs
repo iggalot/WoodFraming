@@ -72,8 +72,7 @@ namespace WoodFraming.Connections
             {
                 var l = LineOf(p.LevelId, p.WallId);
                 var top = TopOf(p.WallId, p.StoryLevelId ?? p.LevelId);
-                string toe = top == null || top.SpacingIn <= 0 ? null :
-                    $", toe-nailed to them with {top.Nail} at {top.SpacingIn.ToString("0.#", CultureInfo.InvariantCulture)}\" o.c.{(top.Fails == null ? "" : ": " + top.Fails)}";
+                string toe = top?.Tie == null ? null : $", {top.Tie}{(top.Fails == null ? "" : ": " + top.Fails)}";
                 if (l == null || l.BoundaryIn <= 0)
                     return toe == null ? p.Connector : $"the {level} {top.Member} on the top plates{toe}";
                 string s = $"the {level} diaphragm's boundary nailing, {l.Nailing}, into the {(top?.Member ?? (l.Roof ? "blocking" : "rim"))} over the top plates (the collector {l.CollectorLb:0} lb ASD){toe ?? ""}";
@@ -198,6 +197,8 @@ namespace WoodFraming.Connections
         [DataMember(Order = 19, EmitDefaultValue = false)] public double LightAllowablePlf { get; set; }
         [DataMember(Order = 20, EmitDefaultValue = false)] public double HeavyFromFt { get; set; }
         [DataMember(Order = 21, EmitDefaultValue = false)] public double HeavyToFt { get; set; }
+        /// <summary>The strap picked from the catalog for <see cref="StrapLb"/>, in words.</summary>
+        [DataMember(Order = 22, EmitDefaultValue = false)] public string Strap { get; set; }
     }
 
     /// <summary>
@@ -217,8 +218,21 @@ namespace WoodFraming.Connections
         [DataMember(Order = 6)] public double ZPrimeLb { get; set; }
         /// <summary>What does not work (null: it works).</summary>
         [DataMember(Order = 7, EmitDefaultValue = false)] public string Fails { get; set; }
+        /// <summary>
+        /// Where toe-nails would need closer than the app's least: framing plates instead (LTP4, C-C-2026 p. 310), at
+        /// <see cref="ClipSpacingIn"/> with <see cref="ClipFastener"/>, each <see cref="ClipAllowableLb"/> (ASD, (160)); null: toe-nails.
+        /// </summary>
+        [DataMember(Order = 8, EmitDefaultValue = false)] public string Clip { get; set; }
+        [DataMember(Order = 9, EmitDefaultValue = false)] public double ClipSpacingIn { get; set; }
+        [DataMember(Order = 10, EmitDefaultValue = false)] public string ClipFastener { get; set; }
+        [DataMember(Order = 11, EmitDefaultValue = false)] public double ClipAllowableLb { get; set; }
 
         public string Member => Blocking ? "blocking" : "rim";
+
+        /// <summary>How it is tied, in words: "toe-nailed to them with 8d common at 7.5\" o.c." or "tied to them with LTP4 at 16\" o.c. (...)".</summary>
+        public string Tie => Clip != null
+            ? $"tied to them with {Clip} at {ClipSpacingIn.ToString("0.#", CultureInfo.InvariantCulture)}\" o.c. ({ClipFastener})"
+            : SpacingIn > 0 ? $"toe-nailed to them with {Nail} at {SpacingIn.ToString("0.#", CultureInfo.InvariantCulture)}\" o.c." : null;
     }
 
     /// <summary>One shear wall story's sill as designed: its anchor bolts (on the foundation) or its nailing (on a floor).</summary>
@@ -309,6 +323,8 @@ namespace WoodFraming.Connections
         /// must take (lb, ASD; 0: the top plates are the collector, or none).
         /// </summary>
         [DataMember(Order = 22, EmitDefaultValue = false)] public double StrapLb { get; set; }
+        /// <summary>The strap picked from the catalog for <see cref="StrapLb"/>, in words (model, size, nails, allowable).</summary>
+        [DataMember(Order = 23, EmitDefaultValue = false)] public string Strap { get; set; }
 
         /// <summary>"10d at 4\" o.c. at the boundary, 6\" at the other panel edges (blocked)".</summary>
         public string Nailing => BoundaryIn <= 0 ? "(not designed)" :

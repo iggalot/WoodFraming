@@ -26,6 +26,8 @@ namespace WoodFraming
         /// <summary>What it is, in words: "rim" (a floor's) or "blocking" (the roof's, between its rafters).</summary>
         public string Member { get; set; } = "rim";
         public double AreaIn2 { get; set; }
+        /// <summary>The member's depth (in): the face a splice strap goes on.</summary>
+        public double DepthIn { get; set; }
         public double FtPrimePsi { get; set; }
         public double FcPrimePsi { get; set; }
         public double CD { get; set; } = 1.6;
@@ -60,6 +62,7 @@ namespace WoodFraming
             catch (ArgumentException e) { c.Fails = e.Message; return c; }
             c.Lumber = $"{SpeciesInfo.Name(species)} {SpeciesInfo.Name(grade)} {nominal}";
             c.AreaIn2 = s.A;
+            c.DepthIn = s.D;
             c.FtPrimePsi = r.Ft * c.CD * cf.Ft;
             c.FcPrimePsi = r.Fc * c.CD * cf.Fc;
             if (c.ForceAsdLb > c.TensionLb + 1e-9)
