@@ -36,6 +36,11 @@ namespace WoodFraming.Tests
                 new TopConnection { WallId = "w2", LevelId = "R", Blocking = true, Nail = "8d common", SpacingIn = 7.5, ZPrimeLb = 129.0 },
                 new TopConnection { WallId = "w1", LevelId = "L2", Nail = "8d common", SpacingIn = 6, ZPrimeLb = 129.0 },
             },
+            Chords = new List<DiaphragmChord>
+            {
+                new DiaphragmChord { LevelId = "L2", WindAlongX = true, FromFt = 0, ToFt = 30, WPlf = 393.4, MomentLbFt = 26551.4, AtFt = 15, DepthFt = 40, ForceLb = 663.8,
+                    EdgeLoFt = 0, EdgeHiFt = 40, WallIds = new List<string> { "w1", "w3" }, Chord = "plates" },
+            },
         };
 
         [TestMethod]
@@ -64,6 +69,11 @@ namespace WoodFraming.Tests
             Assert.AreEqual(7.5, c.TopOf("w2", "R").SpacingIn);
             Assert.AreEqual("rim", c.TopOf("w1", "L2").Member);
             Assert.IsNull(c.TopOf("w1", "R"));
+            var ch = c.ChordsOn("L2", "w3").Single();
+            Assert.IsTrue(ch.WindAlongX);
+            Assert.AreEqual(663.8, ch.ForceLb);
+            Assert.IsFalse(ch.Cantilever);
+            Assert.AreEqual(0, c.ChordsOn("R", "w3").Count);
             ConnectionsSection.Write(b, new ConnectionsSection());
             Assert.IsNull(b.GetData(ConnectionsSection.Key), "an empty one removes the section");
         }

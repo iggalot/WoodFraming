@@ -28,7 +28,8 @@
     `ShearWallDesign.Faces`; the sheathing itself is the model's), its sill (`SillConnection`: the first story's
     `SillAnchors`, an upper story's `SillNails`), its top (`TopConnection`: the rim or blocking toe-nailed into its plates)
     and each diaphragm's
-    lines of shear walls (`DiaphragmLine`: line shear, boundary nailing, collector). `Describe` and `Describer` give a
+    lines of shear walls (`DiaphragmLine`: line shear, boundary nailing, collector) and chords (`DiaphragmChord`, span by
+    span between the lines; `ChordsOn` a wall's). `Describe` and `Describer` give a
     `ShearPair` its connector in words (for `ShearPairs.Of`).
   - `ConnectionDefaults` ("ConnectionDefaults"): the floor and roof sheathing, nails, blocking, framing width, sill
     nail, splice nail, toe-nail. `Start()` is the only place the starting values are written; a value missing from the file

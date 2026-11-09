@@ -34,9 +34,15 @@ namespace WoodFraming.Connections
         [DataMember(Order = 6, EmitDefaultValue = false)] public List<WallNailing> Walls { get; set; } = new List<WallNailing>();
         /// <summary>Each shear wall story's top: the rim or blocking toe-nailed into its plates (<see cref="TopConnection"/>).</summary>
         [DataMember(Order = 7, EmitDefaultValue = false)] public List<TopConnection> Tops { get; set; } = new List<TopConnection>();
+        /// <summary>Each diaphragm's chords, span by span between its lines of shear walls (<see cref="DiaphragmChord"/>).</summary>
+        [DataMember(Order = 8, EmitDefaultValue = false)] public List<DiaphragmChord> Chords { get; set; } = new List<DiaphragmChord>();
 
         public bool IsEmpty => (Sills == null || Sills.Count == 0) && (DiaphragmLines == null || DiaphragmLines.Count == 0) && (Walls == null || Walls.Count == 0) &&
-                               (Tops == null || Tops.Count == 0);
+                               (Tops == null || Tops.Count == 0) && (Chords == null || Chords.Count == 0);
+
+        /// <summary>The chords of <paramref name="levelId"/>'s diaphragm that <paramref name="wallId"/>'s top plates are (none: empty).</summary>
+        public List<DiaphragmChord> ChordsOn(string levelId, string wallId) =>
+            (Chords ?? new List<DiaphragmChord>()).Where(c => c.LevelId == levelId && c.WallIds != null && c.WallIds.Contains(wallId)).ToList();
 
         /// <summary>The top of <paramref name="wallId"/>'s story under <paramref name="storyLevelId"/> (null: none).</summary>
         public TopConnection TopOf(string wallId, string storyLevelId) =>
@@ -147,6 +153,41 @@ namespace WoodFraming.Connections
         /// <summary>The nails' spacing (in) at the panel edges and in the field (0: not nailed at a spacing).</summary>
         [DataMember(Order = 2, EmitDefaultValue = false)] public double EdgeIn { get; set; }
         [DataMember(Order = 3, EmitDefaultValue = false)] public double FieldIn { get; set; }
+    }
+
+    /// <summary>
+    /// One span of a diaphragm as a beam between two lines of shear walls (or past the last one, a cantilever), for wind
+    /// across it (owner 2026-11-08: simple spans, M = w L² / 8; a cantilever w a² / 2), and its chords at the diaphragm's
+    /// edges: T = C = M / d, d the diaphragm's depth there. The chord: the double top plate of the walls under the edge, or
+    /// the floor's rim where none (a strap at each splice), as the collectors are done.
+    /// </summary>
+    [DataContract]
+    public sealed class DiaphragmChord
+    {
+        [DataMember(Order = 1)] public string LevelId { get; set; }
+        [DataMember(Order = 2)] public bool Roof { get; set; }
+        /// <summary>The wind along x (east-west: the span runs north-south between east-west lines), else along y.</summary>
+        [DataMember(Order = 3)] public bool WindAlongX { get; set; }
+        /// <summary>The span's supports along the span axis (ft: y for wind along x, x for wind along y); a cantilever has one.</summary>
+        [DataMember(Order = 4)] public double FromFt { get; set; }
+        [DataMember(Order = 5)] public double ToFt { get; set; }
+        [DataMember(Order = 6, EmitDefaultValue = false)] public bool Cantilever { get; set; }
+        /// <summary>The wind on it per ft of span (plf, W at strength level: the worst case's force over the diaphragm's length).</summary>
+        [DataMember(Order = 7)] public double WPlf { get; set; }
+        /// <summary>The worst moment (lb·ft, ASD), where (ft along the span axis), the depth there (ft), the chord force (lb, ASD).</summary>
+        [DataMember(Order = 8)] public double MomentLbFt { get; set; }
+        [DataMember(Order = 9)] public double AtFt { get; set; }
+        [DataMember(Order = 10)] public double DepthFt { get; set; }
+        [DataMember(Order = 11)] public double ForceLb { get; set; }
+        /// <summary>The edges (ft across: x for wind along x) and the walls under them at the worst moment (their top plates the chords).</summary>
+        [DataMember(Order = 12)] public double EdgeLoFt { get; set; }
+        [DataMember(Order = 13)] public double EdgeHiFt { get; set; }
+        [DataMember(Order = 14)] public List<string> WallIds { get; set; } = new List<string>();
+        /// <summary>What carries it at each edge, in words.</summary>
+        [DataMember(Order = 15, EmitDefaultValue = false)] public string Chord { get; set; }
+        /// <summary>Where an edge's chord is the floor's rim: the strap at each of its splices (lb, ASD).</summary>
+        [DataMember(Order = 16, EmitDefaultValue = false)] public double StrapLb { get; set; }
+        [DataMember(Order = 17, EmitDefaultValue = false)] public string Fails { get; set; }
     }
 
     /// <summary>
