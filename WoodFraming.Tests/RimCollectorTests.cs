@@ -26,10 +26,14 @@ namespace WoodFraming.Tests
         }
 
         [TestMethod]
-        public void OverTheRimsTension_Fails_SouthernPineWide_NotReadYet()
+        public void OverTheRimsTension_Fails_SouthernPineWide_ByHand()
         {
             StringAssert.Contains(RimCollector.Design(15000, Species.DouglasFirLarch, Grade.No2, "2x10").Fails, "over the rim's tension 14042 lb");
-            StringAssert.Contains(RimCollector.Design(1000, Species.SouthernPine, Grade.No2, "2x10").Fails, "not read into this library yet");
+            // Southern Pine No. 2 2x10 (Table 4B, size-specific): A = 1.5 × 9.25 = 13.875; 475 × 1.6 × A = 10,545 lb, 1300 × 1.6 × A = 28,860 lb
+            var sp = RimCollector.Design(1000, Species.SouthernPine, Grade.No2, "2x10");
+            Assert.IsNull(sp.Fails, sp.Fails);
+            Assert.AreEqual(10545, sp.TensionLb, 0.5);
+            Assert.AreEqual(28860, sp.CompressionLb, 0.5);
             StringAssert.Contains(RimCollector.Design(1000, Species.DouglasFirLarch, Grade.No2, "2x14").Fails, "Not a size here");
         }
 
