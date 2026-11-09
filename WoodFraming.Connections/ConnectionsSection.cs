@@ -253,6 +253,11 @@ namespace WoodFraming.Connections
         [DataMember(Order = 20, EmitDefaultValue = false)] public string Note { get; set; }
         /// <summary>What does not work (null: it works).</summary>
         [DataMember(Order = 21, EmitDefaultValue = false)] public string Fails { get; set; }
+        /// <summary>
+        /// Where the floor's rim is the collector (no wall under the line): the tension a strap across each of its butt splices
+        /// must take (lb, ASD; 0: the top plates are the collector, or none).
+        /// </summary>
+        [DataMember(Order = 22, EmitDefaultValue = false)] public double StrapLb { get; set; }
 
         /// <summary>"10d at 4\" o.c. at the boundary, 6\" at the other panel edges (blocked)".</summary>
         public string Nailing => BoundaryIn <= 0 ? "(not designed)" :

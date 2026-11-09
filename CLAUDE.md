@@ -12,6 +12,8 @@
     owner's choice).
   - a double top plate as a diaphragm collector (`TopPlateCollector`: one ply in tension and compression, the splice
     nails).
+  - a floor's rim as the collector where no wall is under the line (`RimCollector`: one ply of the joists' depth,
+    `ModelDefaults.FloorJoistSize`; a strap across each butt splice for the whole force).
   - the rim or the roof's blocking toe-nailed into a wall's top plates (`RimToPlate`: NDS Figure 12A's geometry for the
     yield equations and Ctn 0.83, the owner's choice).
 
