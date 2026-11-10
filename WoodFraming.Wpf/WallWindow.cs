@@ -36,6 +36,9 @@ namespace WoodFraming.Wpf
         public TabControl Tabs => tabs;
         public Framing3DView View3D => view3D;
 
+        /// <summary>Shown over the tabs when the wall is a declared shear wall not designed yet (<see cref="ShearWallDesign.NotDesigned"/>).</summary>
+        public Border NotDesignedBanner { get; }
+
         /// <summary>The shear wall's design is drawn over the framing (on by default).</summary>
         public bool ShowShear { get => shear.IsChecked == true; set => shear.IsChecked = value; }
 
@@ -48,6 +51,17 @@ namespace WoodFraming.Wpf
             shear.ToolTip = "Show the shear wall's design over the framing: its sheathing and nailing over the shear part, the sill bolts, the lever arm and the check. The framing and the hold-downs are always shown.";
             shear.Checked += (s, e) => Redraw();
             shear.Unchecked += (s, e) => Redraw();
+            // a declared shear wall not designed yet: said above every tab, in every app, so nobody builds from its card's sheathing
+            NotDesignedBanner = new Border
+            {
+                Background = new SolidColorBrush(Color.FromRgb(0xFD, 0xEC, 0xEA)), BorderBrush = WallInk.Fail, BorderThickness = new Thickness(2),
+                Padding = new Thickness(10, 6, 10, 6), Margin = new Thickness(0, 0, 0, 6), Visibility = Visibility.Collapsed,
+                Child = new TextBlock { Text = ShearWallDesign.NotDesignedWarning, Foreground = WallInk.Fail, FontWeight = FontWeights.Bold, TextWrapping = TextWrapping.Wrap },
+            };
+            System.Windows.Automation.AutomationProperties.SetName(NotDesignedBanner, "Not designed");
+            SetDock(NotDesignedBanner, Dock.Top);
+            Children.Add(NotDesignedBanner);
+
             bar = new StackPanel { Orientation = Orientation.Horizontal, Margin = new Thickness(0, 0, 0, 4) };
             bar.Children.Add(shear);
             bar.Children.Add(shearNote);
@@ -100,6 +114,7 @@ namespace WoodFraming.Wpf
             view = v;
             framing = v == null || !(v.LengthFt > 0) || !(v.HeightFt > 0) ? null : v.Framing();
             bar.Visibility = elevBar.Visibility = bar3.Visibility = Visibility.Visible;
+            NotDesignedBanner.Visibility = v?.Shear?.NotDesigned == true ? Visibility.Visible : Visibility.Collapsed;
             Redraw();
         }
 
@@ -111,6 +126,7 @@ namespace WoodFraming.Wpf
             view = null;
             framing = null;
             bar.Visibility = elevBar.Visibility = bar3.Visibility = Visibility.Collapsed;
+            NotDesignedBanner.Visibility = Visibility.Collapsed;
             elevationHost.Children.Clear();
             if (elevation != null) elevationHost.Children.Add(elevation);
             view3D.ShowModel(model ?? new Model3DGroup(), key, null, north, fromPlan);
@@ -197,7 +213,8 @@ namespace WoodFraming.Wpf
             if (v == null) return ("Pick a wall on the plan", "");
             string size = f == null ? "" : $"{FtIn.Of(f.Length)} long × {FtIn.Of(f.Height)} high";
             string sub = $"{(v.EastWest ? "East-west" : "North-south")} wall, {size} as built ({v.StoryText}). Studs {v.StudSize} at {v.StudSpacing:0}\" o.c. " +
-                         (v.IsShearWall ? $"Shear wall {FtIn.Of(v.ShearToIn - v.ShearFromIn)}: {v.Shear.Check ?? "designed"}." : "Not a shear wall.");
+                         (!v.IsShearWall ? "Not a shear wall." : v.Shear.NotDesigned ? $"Shear wall {FtIn.Of(v.ShearToIn - v.ShearFromIn)}: NOT DESIGNED." :
+                          $"Shear wall {FtIn.Of(v.ShearToIn - v.ShearFromIn)}: {v.Shear.Check ?? "designed"}.");
             return ($"{v.Name} · {v.LevelName}", sub);
         }
 

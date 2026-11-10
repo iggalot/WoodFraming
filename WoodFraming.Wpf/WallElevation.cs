@@ -194,7 +194,13 @@ namespace WoodFraming.Wpf
                     }
                 }
             if (note != null) WallInk.Label(dc, this, note, new Point(X((p0 + p1) / 2), Y(H / 2)), WallInk.Muted, 12, centre: true);
-            if (shear && d?.Check != null)
+            if (d?.NotDesigned == true)
+            {
+                // declared, not designed: said where it cannot be missed, whatever is toggled (the sheathing is only its card's)
+                WallInk.Label(dc, this, $"Shear wall {FtIn.Of(p1 - p0)}: NOT DESIGNED. No shear check, nailing or hold-downs yet.", new Point(X(0), 8), WallInk.Fail, 12.5, bold: true);
+                WallInk.Label(dc, this, "NOT DESIGNED", new Point(X((p0 + p1) / 2), Y(H * 0.62)), WallInk.Fail, 22, centre: true, bold: true);
+            }
+            else if (shear && d?.Check != null)
                 WallInk.Label(dc, this, $"Shear wall {FtIn.Of(p1 - p0)}: {d.Check}", new Point(X(0), 8), d.Fails ? WallInk.Fail : WallInk.Ink, 11.5, bold: true);
             if (v.Stale != null)
                 WallInk.Label(dc, this, $"The lateral design is out of date: {v.Stale}", new Point(X(0), 26), WallInk.Muted, 10.5);
