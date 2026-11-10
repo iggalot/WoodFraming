@@ -43,10 +43,10 @@ namespace WoodFraming
 
     /// <summary>
     /// How a wall is built, for its elevation, 3D view and list of pieces (the assumptions are the designer's to
-    /// confirm): one 2x sill plate and a double 2x top plate laid flat, as wide as the studs; studs at the wall's spacing
-    /// from the low end, of the wall's size (both from the building model); a hold-down post of 2x plies at each end (as many as fill the
+    /// confirm): one 2x sill plate and a double 2x top plate laid flat, as wide as the studs; studs at the wall's spacing,
+    /// over the shear part from its low end (its hold-down post) and elsewhere from the wall's low end, of the wall's size (both from the building model); a hold-down post of 2x plies at each end (as many as fill the
     /// hold-down's minimum post, at least two); a post of two plies under each hold-down from the story above that lands
-    /// along the wall; 4 × 8 sheets standing up from the low end, so their vertical joints fall on studs (48 = 3 × 16), with
+    /// along the wall; 4 × 8 sheets standing up from the shear part's low end, so their vertical joints fall on studs (48 = 3 × 16; a stud is added at a joint any other spacing misses), with
     /// 2x blocking along the horizontal joint of a wall over 8 ft. Edge nails go round every sheet 3/8 in. in from its edges
     /// at the edge spacing, field nails along the studs inside it at the field spacing.
     /// </summary>
@@ -139,18 +139,38 @@ namespace WoodFraming
                     f.Pieces.Add(new FramingPiece { Kind = FramingKind.PostUnder, X0 = a + i * Ply, X1 = a + (i + 1) * Ply, Y0 = y0, Y1 = y1, Size = f.StudSize });
             }
 
-            // studs at the spacing from the low end, centred on the layout marks, where there is no post
+            // studs centred on the layout marks, where there is no post: over the shear part from its low end (its hold-down
+            // post), so the sheets' joints (every 48 in. from there) fall on studs; outside it from the wall's low end
+            var marks = new List<double>();
             for (double c = f.Spacing; c + Ply / 2 <= L + 1e-9; c += f.Spacing)
+                if (c < p0 - 0.01 || c > p1 + 0.01) marks.Add(c);
+            for (double c = p0 + f.Spacing; c < p1 - 0.01; c += f.Spacing) marks.Add(c);
+            foreach (double c in marks.OrderBy(x => x))
             {
                 double a = c - Ply / 2, b = c + Ply / 2;
                 if (taken.Any(t => a < t.b - 0.01 && b > t.a + 0.01)) continue;
                 f.Pieces.Add(new FramingPiece { Kind = FramingKind.Stud, X0 = a, X1 = b, Y0 = y0, Y1 = y1, Size = f.StudSize });
+                taken.Add((a, b));
             }
 
             // sheets standing up from the shear part's low end, over it; a wall over 8 ft has a horizontal joint, blocked
             for (double x = p0; x < p1 - 0.01; x += SheetWidth)
                 for (double y = 0; y < H - 0.01; y += SheetHeight)
                     f.Sheets.Add(new SheathingSheet { X0 = x, X1 = Math.Min(p1, x + SheetWidth), Y0 = y, Y1 = Math.Min(H, y + SheetHeight) });
+            // every vertical joint on framing: both sheets' edges nailed into one piece under it (a shear wall's panel edges
+            // all on framing or blocking, never between studs); a spacing that does not divide 48 gets a stud at the joint
+            for (double x = p0 + SheetWidth; x < p1 - 0.01; x += SheetWidth)
+            {
+                double xa = x - NailEdgeDistance, xb = x + NailEdgeDistance;
+                bool On(double v) => f.Uprights.Any(p => p.X0 <= v + 0.01 && p.X1 >= v - 0.01);
+                if (On(xa) && On(xb)) continue; // a stud or a post's plies under both sheets' edge nails
+                f.Pieces.RemoveAll(p => p.Kind == FramingKind.Stud && p.X0 < x + Ply / 2 - 0.01 && p.X1 > x - Ply / 2 + 0.01);
+                double a = x - Ply / 2;
+                // a post there under one edge only: the stud beside it, under the other
+                var there = f.Uprights.FirstOrDefault(p => p.X0 < x + Ply / 2 - 0.01 && p.X1 > x - Ply / 2 + 0.01);
+                if (there != null) a = On(xa) ? there.X1 : there.X0 - Ply;
+                f.Pieces.Add(new FramingPiece { Kind = FramingKind.Stud, X0 = a, X1 = a + Ply, Y0 = y0, Y1 = y1, Size = f.StudSize });
+            }
             for (double j = SheetHeight; j < y1 - Ply - 0.01; j += SheetHeight)
             {
                 var ups = f.Uprights.Where(p => p.X0 >= p0 - 0.01 && p.X1 <= p1 + 0.01).OrderBy(p => p.X0).ToList();

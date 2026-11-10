@@ -103,6 +103,56 @@ namespace WoodFraming.Tests
             Assert.AreEqual(24, f.Spacing);
         }
 
+        /// <summary>
+        /// Every edge of every sheet is over framing: at a joint between two sheets, one piece under both sheets' edge nails
+        /// (3/8 in. each side of it); at the shear part's ends, the end post under the edge nails; each horizontal joint blocked.
+        /// </summary>
+        private static void EveryEdgeOnFraming(WallFraming f, string what)
+        {
+            const double e = WallFraming.NailEdgeDistance;
+            bool Under(double a, double b) => f.Uprights.Any(p => p.X0 <= a + 1e-9 && p.X1 >= b - 1e-9);
+            foreach (var s in f.Sheets)
+            {
+                foreach (double x in new[] { s.X0, s.X1 })
+                {
+                    bool partEnd = System.Math.Abs(x - f.PartFrom) < 1e-9 || System.Math.Abs(x - f.PartTo) < 1e-9;
+                    bool ok = partEnd ? Under(x == s.X0 ? x + e : x - e, x == s.X0 ? x + e : x - e) : Under(x - e, x + e);
+                    Assert.IsTrue(ok, $"{what}: the sheet edge at x = {x} in. is between studs");
+                }
+                foreach (double y in new[] { s.Y0, s.Y1 })
+                {
+                    if (y < 0.01 || y > f.Height - 0.01) continue; // on the sill and the top plates
+                    for (double x = s.X0 + 2; x < s.X1 - 2; x += 2)
+                        Assert.IsTrue(f.Pieces.Any(p => p.Kind == FramingKind.Blocking && p.Y0 <= y && p.Y1 >= y && p.X0 <= x && p.X1 >= x) || Under(x, x),
+                                      $"{what}: the sheet's horizontal edge at y = {y} in. has nothing under it at x = {x} in.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// A shear part that starts partway along the wall (the tutorial's W6: 10 ft to 50 ft of 60 ft, 15 ft high): the studs
+        /// are laid out from the part's own low end, so the sheets' joints (168, 216 … 552 in., 48 in. apart from 120) fall on
+        /// studs, not between them; with a spacing that does not divide 48 a stud is put at each joint.
+        /// </summary>
+        [TestMethod]
+        public void AShearPartPartwayAlong_EverySheetEdgeOnFraming()
+        {
+            var f = WallFraming.Build(60, 15, "2x6", 16, 1.5, null, 120, 600);
+            Assert.AreEqual(120, f.PartFrom, 1e-9);
+            foreach (double joint in new[] { 168.0, 216, 264, 312, 360, 408, 456, 504, 552 })
+                Assert.IsTrue(f.Pieces.Any(p => p.Kind == FramingKind.Stud && System.Math.Abs(p.CenterX - joint) < 1e-9), $"a stud centred on the joint at {joint} in.");
+            EveryEdgeOnFraming(f, "60 ft wall, part 10 to 50 ft");
+            Assert.IsTrue(f.Pieces.Any(p => p.Kind == FramingKind.Stud && System.Math.Abs(p.CenterX - 16) < 1e-9), "outside the part: the wall's own layout");
+
+            EveryEdgeOnFraming(WallFraming.Build(60, 15, "2x6", 16, 1.5, null, 24, 192), "part 2 to 16 ft");
+            EveryEdgeOnFraming(WallFraming.Build(60, 15, "2x4", 24, 1.5, null, 30, 400), "24 in. spacing");
+            var odd = WallFraming.Build(40, 9, "2x4", 19.2, 1.5, null, 10, 400);
+            EveryEdgeOnFraming(odd, "19.2 in. spacing");
+            Assert.IsFalse(odd.Uprights.Any(p => odd.Uprights.Any(q => q != p && p.X0 < q.X1 - 0.01 && p.X1 > q.X0 + 0.01)), "no two uprights in the same place");
+            EveryEdgeOnFraming(WallFraming.Build(10, 9, "2x6", 16, 3.5), "a whole wall");
+            EveryEdgeOnFraming(WallFraming.Build(39, 15, "2x6", 16, 3.5), "39 x 15");
+        }
+
         [TestMethod]
         public void PliesFor_FillTheMinimumPost()
         {
