@@ -129,6 +129,31 @@ namespace WoodFraming.Tests
             var plain = new WallPanel();
             plain.Show(WallViews.FromModel(b, w1, l2.Id));
             Assert.IsFalse(plain.Elevation.ShowShear, "a plain wall: nothing to show");
+            Assert.AreEqual("", plain.PartNote, "and no strip in 3D");
+        }
+
+        /// <summary>
+        /// The 3D view marks the shear wall's part on the top plates, whatever is toggled, and says so in its bar: blue, red
+        /// when not designed (W2: 12 ft of 20, from 4 ft).
+        /// </summary>
+        [STATestMethod]
+        public void ThreeD_TheShearPart_AStripOnTheTopPlates_SaidInTheBar()
+        {
+            var (b, w1, w2, l2, l3) = TwoStories();
+            var panel = new WallPanel();
+            panel.Show(WallViews.FromModel(b, w2, l3.Id));
+            var off = WallModel3D.Build(panel.View, panel.Framing, false, false, false, false);
+            var strip = off.Children.OfType<System.Windows.Media.Media3D.GeometryModel3D>().Single(m => m.Material == FramingMaterials.ShearPart);
+            var box = strip.Bounds;
+            Assert.AreEqual(48, box.X, 1e-6, "from the part's low end");
+            Assert.AreEqual(144, box.SizeX, 1e-6, "12 ft");
+            Assert.IsTrue(box.Y >= panel.Framing.Height, "on the top plates");
+            Assert.AreEqual("Blue strip on the top plates: the shear wall (12'-0\" of the 20'-0\" wall, 4'-0\" to 16'-0\" from the low end).", panel.PartNote);
+
+            panel.View.Shear.NotDesigned = true;
+            panel.Show(panel.View);
+            Assert.IsTrue(WallModel3D.Build(panel.View, panel.Framing, true, true, false, false).Children.OfType<System.Windows.Media.Media3D.GeometryModel3D>().Any(m => m.Material == FramingMaterials.NotDesigned));
+            StringAssert.StartsWith(panel.PartNote, "Red strip on the top plates: the shear wall, NOT DESIGNED");
         }
 
         /// <summary>

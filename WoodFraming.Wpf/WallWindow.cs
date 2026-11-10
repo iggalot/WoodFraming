@@ -27,6 +27,10 @@ namespace WoodFraming.Wpf
         private readonly ComboBox face = new ComboBox { Width = 150, Margin = new Thickness(0, 0, 12, 0) };
         private readonly CheckBox nails = Box("Nails"), face1In3D = Box("Face 1 sheathing"), face2In3D = Box("Face 2 sheathing"), cutaway = Box("Cut away the right half");
         private readonly TextBlock shearNote = new TextBlock { Foreground = WallInk.Muted, VerticalAlignment = VerticalAlignment.Center };
+        private readonly TextBlock partNote = new TextBlock { VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
+
+        /// <summary>The 3D tab's line on what its strip on the top plates marks (<see cref="WallModel3D.PartCaption"/>).</summary>
+        public string PartNote => partNote.Text;
         private WallView view;
         private WallFraming framing;
 
@@ -90,6 +94,7 @@ namespace WoodFraming.Wpf
                 cb.Unchecked += (s, e) => Show3D();
                 bar3.Children.Add(cb);
             }
+            bar3.Children.Add(partNote);
             var page3 = new DockPanel();
             SetDock(bar3, Dock.Top);
             page3.Children.Add(bar3);
@@ -157,10 +162,12 @@ namespace WoodFraming.Wpf
         private void Show3D()
         {
             if (view == null && bar.Visibility != Visibility.Visible) return;
-            if (view == null || framing == null) { view3D.ShowModel(new Model3DGroup(), null); return; }
+            if (view == null || framing == null) { partNote.Text = ""; view3D.ShowModel(new Model3DGroup(), null); return; }
             int faces = view.Shear?.Faces?.Count ?? 0;
             bool on = ShowShear && view.IsShearWall;
             var model = WallModel3D.Build(view, framing, on, on && face1In3D.IsChecked == true && faces > 0, on && face2In3D.IsChecked == true && faces > 1, cutaway.IsChecked == true);
+            partNote.Text = WallModel3D.PartCaption(view, framing) ?? "";
+            partNote.Foreground = view.Shear?.NotDesigned == true ? WallInk.Fail : WallInk.Muted;
             // the same wall (its size) keeps the turn; fitted on the wall itself; the building model's north arrow off its corner
             var lo = view.PlanLow;
             var hi = view.PlanHigh;

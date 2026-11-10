@@ -15,7 +15,9 @@ namespace WoodFraming.Wpf
     {
         public static readonly Material Stud = Mat("#E6CFA3"), Plate = Mat("#D2AE78"), Post = Mat("#C08D4E"), Under = Mat("#E39A50"),
                                         Osb = Mat("#C9A66B"), Gypsum = Mat("#ECEEF0"), Steel = Mat("#4B5563"), Concrete = Mat("#C9CDD2"),
-                                        Strap = Mat("#C2410C");
+                                        Strap = Mat("#C2410C"),
+                                        // the shear part marked along the top plates (the plans' shear-wall blue; red when not designed)
+                                        ShearPart = Mat("#1D4ED8"), NotDesigned = Mat("#B91C1C");
 
         /// <summary>A piece's material by its kind.</summary>
         public static Material Of(FramingKind k) =>

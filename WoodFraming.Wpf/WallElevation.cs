@@ -360,8 +360,22 @@ namespace WoodFraming.Wpf
                     double w = an.PlateWasher ? 1.5 : 0.9;
                     g.Children.Add(Box(ax - w, WallFraming.Ply, D / 2 - w, ax + w, WallFraming.Ply + 0.23, D / 2 + w, steel));
                 }
+            // the shear wall's part, a thin strip on the top plates from end to end of it, whatever is toggled (a wall longer
+            // than its shear wall shows which stretch is; red when it is not designed)
+            if (v.IsShearWall && f.PartTo > f.PartFrom)
+                g.Children.Add(Box(f.PartFrom, H + 0.05, -0.5, f.PartTo, H + 0.8, D + 0.5, v.Shear.NotDesigned ? FramingMaterials.NotDesigned : FramingMaterials.ShearPart));
             if (v.OnFoundation) g.Children.Add(Box(-8, -14, -4, L + 8, 0, D + 4, FramingMaterials.Concrete));
             return g;
+        }
+
+        /// <summary>What the 3D view's strip on the top plates marks, in words (null: not a shear wall).</summary>
+        public static string PartCaption(WallView v, WallFraming f)
+        {
+            if (v?.IsShearWall != true || f == null) return null;
+            string where = f.PartTo - f.PartFrom >= f.Length - 0.01 ? "the whole wall" :
+                           $"{FtIn.Of(f.PartTo - f.PartFrom)} of the {FtIn.Of(f.Length)} wall, {(f.PartFrom < 0.01 ? "0'-0\"" : FtIn.Of(f.PartFrom))} to {FtIn.Of(f.PartTo)} from the low end";
+            return v.Shear.NotDesigned ? $"Red strip on the top plates: the shear wall, NOT DESIGNED ({where})."
+                                       : $"Blue strip on the top plates: the shear wall ({where}).";
         }
     }
 }
