@@ -131,6 +131,30 @@ namespace WoodFraming.Tests
             Assert.IsFalse(plain.Elevation.ShowShear, "a plain wall: nothing to show");
         }
 
+        /// <summary>
+        /// A design stamped with what it was found from: the views say it is out of date once the building or the wind changes
+        /// (LateralSection.OutOfDate, the one routine the plans and the Load Manager use too), not only when a wall is gone.
+        /// </summary>
+        [TestMethod]
+        public void FromModel_TheWindChangedSinceTheDesign_TheViewSaysItIsOutOfDate()
+        {
+            var (b, w1, w2, l2, l3) = TwoStories();
+            b.SetData("Wind", "{\"WindSpeed\":115}");
+            var lat = LateralSection.Read(b);
+            lat.BasedOn = new System.Collections.Generic.Dictionary<string, string>
+            {
+                [BuildingModel.Serialization.ModelFingerprint.GeometryPart] = BuildingModel.Serialization.ModelFingerprint.Geometry(b),
+                ["data:Wind"] = BuildingModel.Serialization.ModelFingerprint.Data(b, "Wind"),
+                ["shear walls"] = "abc", // the shear wall app's own: only it compares that
+            };
+            LateralSection.Write(b, lat);
+            Assert.IsNull(WallViews.FromModel(b, w2, l3.Id).Stale, "as saved: up to date");
+            b.SetData("Wind", "{\"WindSpeed\":130}");
+            Assert.AreEqual("The wind inputs changed since the shear walls were saved.", WallViews.FromModel(b, w2, l3.Id).Stale);
+            w2.End = new BuildingModel.Geometry.Point2(21, 0);
+            Assert.AreEqual("The building and the wind inputs changed since the shear walls were saved.", WallViews.FromModel(b, w2, l3.Id).Stale);
+        }
+
         [STATestMethod]
         public void Window_ShowsAWall_ItsHeading()
         {

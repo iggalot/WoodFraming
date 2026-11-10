@@ -138,7 +138,7 @@ namespace WoodFraming.Wpf
                 HeightFt = topLevel != null && below != null ? topLevel.Elevation - below.Elevation : 0,
                 StudSize = b.StudSizeOf(w, top), StudSpacing = b.StudSpacingOf(w, top),
                 PlanLow = low, PlanHigh = high,
-                Stale = lat?.Stale(b),
+                Stale = lat?.OutOfDate(b), // a wall gone or moved, or the building or wind changed since it was saved
             };
             if (lat == null) return v;
 
