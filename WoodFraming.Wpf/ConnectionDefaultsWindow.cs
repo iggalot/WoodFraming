@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using WoodFraming.Connections;
 
 namespace WoodFraming.Wpf
@@ -30,6 +31,27 @@ namespace WoodFraming.Wpf
         private readonly CheckBox floorBlocked = new CheckBox { Content = "Blocked (SDPWS Table 4.2A; unblocked: 4.2C)" },
                                   roofBlocked = new CheckBox { Content = "Blocked (SDPWS Table 4.2A; unblocked: 4.2C)" };
         private ConnectionDefaults shown;
+        private readonly TextBlock warning = new TextBlock
+        {
+            TextWrapping = TextWrapping.Wrap, Foreground = new SolidColorBrush(Color.FromRgb(0x8A, 0x5A, 0x00)), FontWeight = FontWeights.SemiBold,
+            Margin = new Thickness(0, 8, 0, 0), Visibility = Visibility.Collapsed,
+        };
+        private Func<ConnectionDefaults, string> check;
+
+        /// <summary>
+        /// The designing app's word on the choices as they are shown (null: nothing to say), e.g. a nail and panel thickness its
+        /// SDPWS tables do not have together; shown under the choices, in amber, as they change. OK still saves them (they are
+        /// the project's choices): what cannot be designed says NOT DESIGNED where it is.
+        /// </summary>
+        public Func<ConnectionDefaults, string> Check { get => check; set { check = value; Recheck(); } }
+
+        private void Recheck()
+        {
+            string w = null;
+            try { w = shown == null ? null : check?.Invoke(Values()); } catch (Exception) { w = null; }
+            warning.Text = w == null ? "" : "▲ " + w;
+            warning.Visibility = w == null ? Visibility.Collapsed : Visibility.Visible;
+        }
 
         public ConnectionDefaultsWindow(ConnectionDefaults d)
         {
@@ -87,6 +109,13 @@ namespace WoodFraming.Wpf
             Grid.SetRow(note, row++);
             Grid.SetColumnSpan(note, 2);
             grid.Children.Add(note);
+            // what the app that designs with them says of the choices (a nail and panel its tables do not have), live
+            grid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Grid.SetRow(warning, row++);
+            Grid.SetColumnSpan(warning, 2);
+            grid.Children.Add(warning);
+            foreach (var c in new[] { grade, floorT, floorNail, roofT, roofNail, width }) c.SelectionChanged += (s, e) => Recheck();
+            foreach (var c in new[] { floorBlocked, roofBlocked }) { c.Checked += (s, e) => Recheck(); c.Unchecked += (s, e) => Recheck(); }
 
             var buttons = new StackPanel { Orientation = Orientation.Horizontal, HorizontalAlignment = HorizontalAlignment.Right, Margin = new Thickness(0, 12, 0, 0) };
             var start = new Button { Content = "_Starting values", Padding = new Thickness(10, 2, 10, 2), Margin = new Thickness(0, 0, 8, 0) };
@@ -145,6 +174,7 @@ namespace WoodFraming.Wpf
             Fill(sillNail, SillNails, d.SillNail, n => $"{n} common", Same);
             Fill(spliceNail, SpliceNails, d.SpliceNail, n => $"{n} common", Same);
             Fill(toeNail, ToeNails, d.ToeNail, n => $"{n} common", Same);
+            Recheck();
         }
 
         /// <summary>The program's starting values (<see cref="ConnectionDefaults"/>), shown to keep or cancel.</summary>
@@ -169,9 +199,9 @@ namespace WoodFraming.Wpf
         }
 
         /// <summary>Shows the window over <paramref name="owner"/>: the values chosen, or null when cancelled.</summary>
-        public static ConnectionDefaults Edit(Window owner, ConnectionDefaults d)
+        public static ConnectionDefaults Edit(Window owner, ConnectionDefaults d, Func<ConnectionDefaults, string> check = null)
         {
-            var w = new ConnectionDefaultsWindow(d) { Owner = owner };
+            var w = new ConnectionDefaultsWindow(d) { Owner = owner, Check = check };
             return w.ShowDialog() == true ? w.Values() : null;
         }
     }
